@@ -5,13 +5,55 @@ from dataclasses import replace
 from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
-from prompt_toolkit.layout import HSplit, Layout, VSplit
+from prompt_toolkit.layout import Dimension, HSplit, Layout, VSplit
+from prompt_toolkit.layout.processors import Processor, Transformation
 from prompt_toolkit.widgets import Frame, TextArea
 from .discussion import DiscussionPacket, DecisionResponse, PacketPoint, Proposal
 from .markdown import render_markdown
 from .transport import LiveSessionTransport, EventAcknowledgement
 
 RECORDED_CONTROLS = {"\n": "select", "\r": "select", "r": "reject", "c": "clarify", "m": "request-more-evidence", "a": "add-proposal", "s": "safe-exit", "o": "reopen"}
+
+
+class _ActiveHighlightProcessor(Processor):
+    """Paint the selected decision's source phrase in the document pane.
+
+    Rich supplies the document's terminal Markdown rendering, while this
+    prompt-toolkit processor adds the interaction-specific visual state.  The
+    source buffer remains plain text so scrolling, searching, and tests keep
+    their normal offsets.
+    """
+
+    def __init__(self, phrase):
+        self._phrase = phrase
+
+    def apply_transformation(self, transformation_input):
+        phrase = (self._phrase() or "").casefold()
+        fragments = transformation_input.fragments
+        if not phrase:
+            return Transformation(fragments)
+        line = "".join(text for _style, text in fragments)
+        start = line.casefold().find(phrase)
+        if start < 0:
+            return Transformation(fragments)
+        end = start + len(phrase)
+        transformed = []
+        offset = 0
+        for style, text in fragments:
+            fragment_end = offset + len(text)
+            if fragment_end <= start or offset >= end:
+                transformed.append((style, text))
+            else:
+                before = max(0, start - offset)
+                after = max(0, fragment_end - end)
+                if before:
+                    transformed.append((style, text[:before]))
+                match_end = len(text) - after if after else len(text)
+                transformed.append(("bg:ansigreen fg:ansiwhite bold", text[before:match_end]))
+                if after:
+                    transformed.append((style, text[-after:]))
+            offset = fragment_end
+        return Transformation(transformed)
 
 def dispatch_recorded_input(keys: str, on_event) -> list[str]:
     emitted = []
@@ -33,6 +75,9 @@ class LiveInteraction:
     def point(self): return self.packet.points[self.point_index]
     @property
     def proposal(self): return self.point.proposals[self.proposal_index]
+    def active_highlight(self, document_mode: str | None = None) -> str:
+        mode = document_mode or self.document_mode
+        return self.point.document_highlights.get(mode, self.point.highlight or self.point.question)
     def move_point(self, delta: int):
         self.point_index = max(0, min(len(self.packet.points)-1, self.point_index + delta)); self.proposal_index = 0
     def move_proposal(self, delta: int):
@@ -60,7 +105,14 @@ class LiveInteraction:
         for i, point in enumerate(self.packet.points):
             response = self.responses.get(point.point_id)
             user_proposal = next((proposal for proposal in point.proposals if proposal.label.startswith("User: ")), None)
-            status = "✅ answered" if response else ("✎ proposal" if user_proposal else "unresolved")
+            if response and response.disposition == "select":
+                status = "✅ answered"
+            elif response and response.disposition == "clarify":
+                status = "⚠ clarification requested"
+            elif response and response.disposition == "reject":
+                status = "↩ rejected"
+            else:
+                status = "✎ proposal" if user_proposal else "unresolved"
             lines.append(f"{'▶' if i == self.point_index else ' '} {point.point_id} [{status}]  {point.anchor}")
         lines += ["", f"Decision: {self.point.question}"]
         response = self.responses.get(self.point.point_id)
@@ -75,7 +127,9 @@ class LiveInteraction:
         return "\n".join(lines)
     def render_helper(self) -> str:
         p = self.proposal
-        return f"Proposal {self.proposal_index + 1}/{len(self.point.proposals)}: {p.label}\n\nRationale: {p.rationale}\nConfidence: {p.confidence:.2f}\nTrade-offs: {p.tradeoffs}\n\nAnchor: {self.point.anchor}\nHighlight: {self.point.highlight or self.point.question}\nImplications: {self.point.implications}\nEvidence gap: {self.point.evidence_gap or 'none recorded'}\nHuman intent is separate from implementation and quality evidence."
+        response = self.responses.get(self.point.point_id)
+        prefix = "Clarification requested: this decision is not answered.\n\n" if response and response.disposition == "clarify" else ""
+        return prefix + f"Proposal {self.proposal_index + 1}/{len(self.point.proposals)}: {p.label}\n\nRationale: {p.rationale}\nConfidence: {p.confidence:.2f}\nTrade-offs: {p.tradeoffs}\n\nAnchor: {self.point.anchor}\nHighlight: {self.active_highlight()}\nImplications: {self.point.implications}\nEvidence gap: {self.point.evidence_gap or 'none recorded'}\nHuman intent is separate from implementation and quality evidence."
 
     def switch_document(self):
         self.document_mode = "workplan" if self.document_mode != "workplan" else "design"
@@ -105,7 +159,7 @@ def _packet_from_decisions(decisions, design_document: str, workplan: str) -> Di
         proposals = tuple(Proposal(p.get("label", "Proposal"), p.get("rationale", "No rationale recorded"), float(p.get("confidence", .5)), p.get("tradeoffs", "No trade-offs recorded")) for p in raw.get("proposals", []))
         while len(proposals) < 2:
             proposals += (Proposal("Request evidence", "Gather missing evidence", .5, "Delays decision"),)
-        points.append(PacketPoint(raw["point_id"], raw.get("anchor", "document:1"), raw.get("question", "What should happen?"), proposals, raw.get("helper", raw.get("implications", "Review downstream implications")), raw.get("evidence_gap", ""), highlight=raw.get("highlight", raw.get("question", ""))))
+        points.append(PacketPoint(raw["point_id"], raw.get("anchor", "document:1"), raw.get("question", "What should happen?"), proposals, raw.get("helper", raw.get("implications", "Review downstream implications")), raw.get("evidence_gap", ""), highlight=raw.get("highlight", raw.get("question", "")), document_highlights=dict(raw.get("highlights", {}))))
     return DiscussionPacket("interactive", 1, tuple(points), "design")
 
 
@@ -115,6 +169,7 @@ def _standalone_demo_decisions() -> list[dict]:
         "anchor": anchor,
         "question": question,
         "highlight": {"design:L4": "Design boundary", "workplan:L8": "Rollout step", "design:L16": "Validation path"}[anchor],
+        "highlights": {"design": "Design boundary" if anchor == "design:L4" else "Validation path" if anchor == "design:L16" else "Design boundary", "workplan": "Rollout step"},
         "proposals": [
             {"label": "Conservative", "rationale": "Minimize change", "confidence": .8, "tradeoffs": "slower delivery"},
             {"label": "Expedite", "rationale": "Shorten feedback loop", "confidence": .6, "tradeoffs": "higher review load"},
@@ -141,7 +196,12 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     design_document = design_document if design_document is not None else document
     packet = packet or (_packet_from_decisions(decisions, design_document, workplan) if decisions else None)
     interaction = LiveInteraction(packet or _default_packet(design_document, points))
-    document_view = TextArea(text=render_markdown(design_document), read_only=True, scrollbar=True)
+    document_view = TextArea(
+        text=render_markdown(design_document),
+        read_only=True,
+        scrollbar=True,
+        input_processors=[_ActiveHighlightProcessor(lambda: interaction.active_highlight() if packet else "")],
+    )
     points_view = TextArea(text=interaction.render_points() if packet else points, read_only=True, scrollbar=True)
     helper_view = TextArea(text=interaction.render_helper() if packet else helper, read_only=True, scrollbar=True)
     editor = TextArea(text="", multiline=True, scrollbar=True, height=3, prompt="New proposal (label | rationale | confidence | trade-offs): ")
@@ -155,7 +215,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         rendered = render_markdown(document)
         if packet:
             point = interaction.point
-            phrase = point.highlight or point.question or point.anchor
+            phrase = interaction.active_highlight()
             # If the selected phrase is only present in the other authoritative
             # document, follow its anchor.  This keeps normal manual w/d
             # inspection possible when both documents contain the phrase.
@@ -184,9 +244,17 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
                 document_view.text += f"\n\n▶ HIGHLIGHT NOT FOUND IN DOCUMENT: {phrase}"
                 position = document_view.text.casefold().find(phrase.casefold())
             document_view.buffer.cursor_position = max(0, position)
+            # BufferControl renders search matches with its configured
+            # highlight style.  Keeping the search state on the rendered
+            # Markdown (rather than inserting marker characters) preserves
+            # valid Markdown/text while making the active phrase visibly
+            # highlighted in every live terminal.
+            document_view.control.search_state.text = phrase
+            document_view.control.search_state.ignore_case = True
         else:
             document_view.text = rendered
             document_view.buffer.cursor_position = 0
+            document_view.control.search_state.text = ""
     def emit(event, event_type):
         response = None
         previous_response = interaction.responses.get(interaction.point.point_id) if packet else None
@@ -210,6 +278,12 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
                 helper_view.text = f"Event not accepted: {acknowledgement.reason}"
                 return
         refresh()
+        if response is not None and response.disposition == "clarify":
+            helper_view.text = (
+                "Clarification requested: this decision is not answered.\n\n"
+                "Review the highlighted document context, then select a proposal, "
+                "add your own proposal, or request evidence."
+            )
         if on_event is not None: on_event(event_type)
         if transport is not None:
             application.awtui_last_acknowledgement = acknowledgement
@@ -272,14 +346,50 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             event.app.current_buffer.insert_text("a")
             return
         interaction.input_mode = True; editor.visible = True; event.app.layout.focus(editor); refresh()
-    body = HSplit([VSplit([Frame(document_view, title="Design / Workplan"), Frame(points_view, title="Decisions and proposals")]), Frame(helper_view, title="Helper: rationale, implications, evidence"), editor, footer])
+    # Keep the pane geometry independent of the amount of text in a document,
+    # proposal, or helper message.  The weighted dimensions are deliberately
+    # attached to the containers (rather than inferred from TextArea content):
+    # each pane keeps its allocation while the terminal is resized, and
+    # prompt-toolkit reflows the complete layout on SIGWINCH.  Minimums make
+    # narrow terminals degrade as a whole instead of allowing one pane to
+    # consume all available space.
+    pane_width = Dimension(min=28, max=120, weight=1)
+    document_row_height = Dimension(min=8, max=40, weight=3)
+    helper_height = Dimension(min=6, max=12, preferred=9, weight=1)
+    document_row = VSplit(
+        [
+            Frame(document_view, title="Design / Workplan", width=pane_width),
+            Frame(points_view, title="Decisions and proposals", width=pane_width),
+        ],
+        padding=1,
+        width=Dimension(weight=1),
+        height=document_row_height,
+    )
+    helper_frame = Frame(
+        helper_view,
+        title="Helper: rationale, implications, evidence",
+        width=Dimension(weight=1),
+        height=helper_height,
+    )
+    body = HSplit(
+        [document_row, helper_frame, editor, footer],
+        width=Dimension(weight=1),
+        height=Dimension(weight=1),
+    )
     application = Application(
         layout=Layout(body), key_bindings=bindings, full_screen=True,
         erase_when_done=True,
     )
     interaction._refresh = refresh
     refresh()
-    application.awtui_panes = (document_view, points_view, helper_view); application.awtui_footer = footer; application.editor = editor; application.interaction = interaction; application.awtui_state = interaction
+    application.awtui_panes = (document_view, points_view, helper_view)
+    application.awtui_footer = footer
+    application.awtui_layout_dimensions = {
+        "document_row": document_row_height,
+        "pane_width": pane_width,
+        "helper": helper_height,
+    }
+    application.editor = editor; application.interaction = interaction; application.awtui_state = interaction
     return application
 
 

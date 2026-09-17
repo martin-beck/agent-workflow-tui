@@ -95,3 +95,19 @@ def test_footer_advertises_document_page_navigation():
     footer = app.awtui_footer.text.lower()
     assert "page-up" in footer or "pageup" in footer
     assert "page-down" in footer or "pagedown" in footer
+
+
+def test_switching_documents_uses_document_specific_highlight_without_warning():
+    app = build_application(
+        design_document="# Design\n\nBoundary phrase",
+        workplan="# Workplan\n\nRollout phrase",
+        decisions=[{
+            "point_id": "p", "anchor": "design:L2", "highlight": "Boundary phrase",
+            "highlights": {"design": "Boundary phrase", "workplan": "Rollout phrase"},
+            "question": "Choose", "proposals": [{"label": "A"}, {"label": "B"}],
+        }],
+    )
+    app.awtui_state.switch_document()
+    assert app.awtui_state.document_mode == "workplan"
+    assert "Rollout phrase" in app.awtui_panes[0].text
+    assert "HIGHLIGHT NOT FOUND" not in app.awtui_panes[0].text

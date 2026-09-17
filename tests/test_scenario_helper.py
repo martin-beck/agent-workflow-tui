@@ -31,7 +31,7 @@ def test_helper_launches_tui_and_reports_events():
     assert "Scenario complete:" in output[-2]
     assert captured["on_event"] is not None
     assert len(captured["decisions"]) == 3
-    assert captured["workplan"].startswith("WORKPLAN")
+    assert captured["workplan"].startswith("# Work plan")
 
 
 def test_demo_decisions_have_distinct_document_anchors():

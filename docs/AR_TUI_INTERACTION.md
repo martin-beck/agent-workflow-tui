@@ -30,6 +30,13 @@ AR context -> packet review -> formal review -> TUI discussion
 Safe exit persists the complete packet, answered and unresolved points, and a
 bounded future-request-to-AR mapping. It never marks the AR complete by itself.
 
+`clarify` is a request for more context, not an answer. It emits a clarification
+event, marks the point `clarification requested`, leaves every proposal visible,
+and explains in the helper pane that the human may review the highlighted text,
+request evidence, add a proposal, or select an answer. A later `enter` selection
+replaces that state with the selected-only, green-checkmarked answer; arrow
+navigation reopens it for revision.
+
 For a live Coordinator-backed session, callers use
 `build_application_from_context(context, decisions=..., record_event=...)`.
 The TUI wraps every accepted action in the context identity and monotonic

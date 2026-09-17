@@ -94,6 +94,21 @@ def test_answered_decision_shows_checkmark_and_only_selected_proposal():
     assert "B" in rendered and "A" not in rendered
 
 
+def test_clarify_requests_more_context_without_marking_decision_answered():
+    app = build_application(
+        design_document="# Design\n\nBoundary phrase",
+        decisions=[{"point_id": "p", "anchor": "design:L2", "highlight": "Boundary phrase", "question": "Choose", "proposals": [{"label": "A"}, {"label": "B"}]}],
+    )
+    state = app.awtui_state
+    state.respond("select")
+    state.respond("clarify")
+    rendered = app.awtui_panes[1].text
+    assert "⚠ clarification requested" in rendered
+    assert "✅ answered" not in rendered
+    assert "A" in rendered and "B" in rendered
+    assert "Clarification requested" in app.awtui_panes[2].text
+
+
 def test_user_proposal_is_visible_and_can_be_replaced_before_commit():
     app = build_application(
         design_document="# Design\n\nBoundary phrase",

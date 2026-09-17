@@ -102,7 +102,14 @@ class LiveInteraction:
         for i, point in enumerate(self.packet.points):
             response = self.responses.get(point.point_id)
             user_proposal = next((proposal for proposal in point.proposals if proposal.label.startswith("User: ")), None)
-            status = "✅ answered" if response else ("✎ proposal" if user_proposal else "unresolved")
+            if response and response.disposition == "select":
+                status = "✅ answered"
+            elif response and response.disposition == "clarify":
+                status = "⚠ clarification requested"
+            elif response and response.disposition == "reject":
+                status = "↩ rejected"
+            else:
+                status = "✎ proposal" if user_proposal else "unresolved"
             lines.append(f"{'▶' if i == self.point_index else ' '} {point.point_id} [{status}]  {point.anchor}")
         lines += ["", f"Decision: {self.point.question}"]
         response = self.responses.get(self.point.point_id)
@@ -117,7 +124,9 @@ class LiveInteraction:
         return "\n".join(lines)
     def render_helper(self) -> str:
         p = self.proposal
-        return f"Proposal {self.proposal_index + 1}/{len(self.point.proposals)}: {p.label}\n\nRationale: {p.rationale}\nConfidence: {p.confidence:.2f}\nTrade-offs: {p.tradeoffs}\n\nAnchor: {self.point.anchor}\nHighlight: {self.point.highlight or self.point.question}\nImplications: {self.point.implications}\nEvidence gap: {self.point.evidence_gap or 'none recorded'}\nHuman intent is separate from implementation and quality evidence."
+        response = self.responses.get(self.point.point_id)
+        prefix = "Clarification requested: this decision is not answered.\n\n" if response and response.disposition == "clarify" else ""
+        return prefix + f"Proposal {self.proposal_index + 1}/{len(self.point.proposals)}: {p.label}\n\nRationale: {p.rationale}\nConfidence: {p.confidence:.2f}\nTrade-offs: {p.tradeoffs}\n\nAnchor: {self.point.anchor}\nHighlight: {self.point.highlight or self.point.question}\nImplications: {self.point.implications}\nEvidence gap: {self.point.evidence_gap or 'none recorded'}\nHuman intent is separate from implementation and quality evidence."
 
     def switch_document(self):
         self.document_mode = "workplan" if self.document_mode != "workplan" else "design"
@@ -265,6 +274,12 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
                 helper_view.text = f"Event not accepted: {acknowledgement.reason}"
                 return
         refresh()
+        if response is not None and response.disposition == "clarify":
+            helper_view.text = (
+                "Clarification requested: this decision is not answered.\n\n"
+                "Review the highlighted document context, then select a proposal, "
+                "add your own proposal, or request evidence."
+            )
         if on_event is not None: on_event(event_type)
         if transport is not None:
             application.awtui_last_acknowledgement = acknowledgement

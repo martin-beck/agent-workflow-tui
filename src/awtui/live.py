@@ -35,6 +35,13 @@ class LiveInteraction:
     def move_point(self, delta: int):
         self.point_index = max(0, min(len(self.packet.points)-1, self.point_index + delta)); self.proposal_index = 0
     def move_proposal(self, delta: int):
+        # A previously selected proposal is provisional until the user leaves
+        # the current choice.  Moving left/right explicitly re-opens the
+        # decision so every candidate is visible and the next Enter can
+        # replace the prior answer.  This avoids navigating hidden candidates
+        # while retaining the compact, selected-only view at rest.
+        if delta and self.point.point_id in self.responses:
+            del self.responses[self.point.point_id]
         self.proposal_index = max(0, min(len(self.point.proposals)-1, self.proposal_index + delta))
     def add_proposal(self, proposal: Proposal):
         point = replace(self.point, proposals=self.point.proposals + (proposal,))
@@ -155,7 +162,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             interaction._manual_document_switch = False
             if follow_anchor and phrase.casefold() not in rendered.casefold():
                 target = point.anchor.split(":", 1)[0].lower()
-                if target == "workplan" and interaction.document_mode != "workplan":
+                if target in {"workplan", "plan"} and interaction.document_mode != "workplan":
                     interaction.document_mode = "workplan"
                     rendered = render_markdown(workplan)
                 elif target == "design" and interaction.document_mode != "design":

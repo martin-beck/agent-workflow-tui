@@ -23,3 +23,12 @@ def resume(path: Path, *, project_id: str, ar_id: str, task_revision: int, packe
             raise ValueError(f"stale journal {key}")
     return value
 
+
+def render_history(session: dict[str, Any]) -> str:
+    """Render public journal state for the helper pane without private transcripts."""
+    lines = [f"Journal {session['ar_id']} revision {session['task_revision']}"]
+    lines.append(f"answered: {len(session['responses'])}")
+    lines.append(f"unresolved: {', '.join(session['unresolved']) or 'none'}")
+    requests = session["future_requests"]
+    lines.append("future ARs: " + (", ".join(requests) if requests else "none"))
+    return "\n".join(lines)

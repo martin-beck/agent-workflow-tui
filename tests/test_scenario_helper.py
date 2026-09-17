@@ -6,7 +6,7 @@ class FakeApp:
     def __init__(self, events):
         self.events = events
 
-    def run(self):
+    def run(self, **_kwargs):
         self.events("select")
 
 

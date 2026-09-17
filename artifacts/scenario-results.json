@@ -127,8 +127,55 @@
       "id": "full-contest",
       "screenshot": "docs/screenshots/full-contest.svg",
       "title": "Contest and resolve a decision"
+    },
+    {
+      "events": [
+        "request-more-evidence",
+        "reject"
+      ],
+      "id": "evidence-then-reject",
+      "screenshot": "docs/screenshots/evidence-then-reject.svg",
+      "title": "Reject after evidence review"
+    },
+    {
+      "events": [
+        "reopen",
+        "safe-exit"
+      ],
+      "id": "reopen-save",
+      "screenshot": "docs/screenshots/reopen-save.svg",
+      "title": "Reopen and persist unresolved conflict"
+    },
+    {
+      "events": [
+        "add-proposal",
+        "clarify",
+        "select"
+      ],
+      "id": "alternative-clarify",
+      "screenshot": "docs/screenshots/alternative-clarify.svg",
+      "title": "Clarify an added alternative before choosing"
+    },
+    {
+      "events": [
+        "request-more-evidence"
+      ],
+      "id": "cancel-after-review",
+      "screenshot": "docs/screenshots/cancel-after-review.svg",
+      "title": "Cancel after reviewing evidence"
+    },
+    {
+      "events": [
+        "select",
+        "clarify",
+        "reject",
+        "safe-exit"
+      ],
+      "id": "multi-point-handoff",
+      "screenshot": "docs/screenshots/multi-point-handoff.svg",
+      "title": "Resolve points then hand off safely"
     }
   ],
-  "scenario_count": 15,
+  "scenario_count": 20,
   "schema_version": 1
 }

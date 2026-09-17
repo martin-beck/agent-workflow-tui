@@ -2,7 +2,7 @@
 
 These workflows are generated from `scenarios/corpus.json` and replayed through the live control mapping. Each case has a deterministic SVG screenshot and an explicit event trace.
 
-**Generated scenarios:** 15
+**Generated scenarios:** 20
 
 ## Select ranked option
 
@@ -151,5 +151,55 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `c, m, a, enter, s`
 - **Emitted events:** `clarify, request-more-evidence, add-proposal, select, safe-exit`
 - **Screenshot:** [open terminal capture](../docs/screenshots/full-contest.svg)
+
+This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
+
+## Reject after evidence review
+
+- **Scenario ID:** `evidence-then-reject`
+- **AR context:** `AR-S16` revision `6`
+- **Input actions:** `m, r`
+- **Emitted events:** `request-more-evidence, reject`
+- **Screenshot:** [open terminal capture](../docs/screenshots/evidence-then-reject.svg)
+
+This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
+
+## Reopen and persist unresolved conflict
+
+- **Scenario ID:** `reopen-save`
+- **AR context:** `AR-S17` revision `8`
+- **Input actions:** `o, s`
+- **Emitted events:** `reopen, safe-exit`
+- **Screenshot:** [open terminal capture](../docs/screenshots/reopen-save.svg)
+
+This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
+
+## Clarify an added alternative before choosing
+
+- **Scenario ID:** `alternative-clarify`
+- **AR context:** `AR-S18` revision `2`
+- **Input actions:** `a, c, enter`
+- **Emitted events:** `add-proposal, clarify, select`
+- **Screenshot:** [open terminal capture](../docs/screenshots/alternative-clarify.svg)
+
+This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
+
+## Cancel after reviewing evidence
+
+- **Scenario ID:** `cancel-after-review`
+- **AR context:** `AR-S19` revision `9`
+- **Input actions:** `m, escape`
+- **Emitted events:** `request-more-evidence`
+- **Screenshot:** [open terminal capture](../docs/screenshots/cancel-after-review.svg)
+
+This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
+
+## Resolve points then hand off safely
+
+- **Scenario ID:** `multi-point-handoff`
+- **AR context:** `AR-S20` revision `10`
+- **Input actions:** `enter, c, r, s`
+- **Emitted events:** `select, clarify, reject, safe-exit`
+- **Screenshot:** [open terminal capture](../docs/screenshots/multi-point-handoff.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.

@@ -63,6 +63,24 @@ include both the display label and the stable `selected_candidate` ID in the
 revision-bound event payload, so Coordinator persistence and AWQ gates do not
 have to infer identity from presentation text.
 
+## Coordinator bridge (schema 1.0)
+
+Coordinator creates a `coordinator-tui-request` before launching a live
+session. It contains the immutable AR snapshot and explicit
+`interaction_required: true`, `decision_request_ref`, `decision_status`, and
+Guidance `trigger`. AR lifecycle status alone is not a human-gate signal. The
+request shape is defined in `schemas/coordinator-tui-request.schema.json`.
+
+After an accepted event, the TUI adapter creates a
+`coordinator-tui-response`, never edits AR files, and includes an `ar_update`.
+Coordinator appends `description_append` to AR history and merges the
+`specification_update` into the AR specification under the referenced request
+and point. Selection, rejection, and reconciliation resolve the decision;
+clarification remains pending. Updates are applied only when project, AR,
+revision, request reference, and session sequence still match. See
+`schemas/coordinator-tui-response.schema.json` and
+`specifications/coordinator-tui-bridge.json`.
+
 For source-driven sessions, `build_application_from_structure_graph` accepts
 the AR structure graph directly. Graph nodes are the sole owners of design and
 work-plan Markdown plus named anchors; each decision must reference an existing

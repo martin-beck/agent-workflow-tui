@@ -75,6 +75,40 @@ def test_standalone_demo_has_multiple_decisions_and_active_anchor():
     assert "ACTIVE DECISION ANCHOR: design:L4" in app.awtui_panes[0].text
 
 
+def test_answered_decision_shows_checkmark_and_only_selected_proposal():
+    app = build_application(
+        design_document="# Design\n\nBoundary phrase",
+        decisions=[{"point_id": "p", "anchor": "design:L2", "highlight": "Boundary phrase", "question": "Choose", "proposals": [{"label": "A"}, {"label": "B"}]}],
+    )
+    state = app.awtui_state
+    state.respond("select")
+    rendered = app.awtui_panes[1].text
+    assert "✅ answered" in rendered
+    assert "A" in rendered and "B" not in rendered
+    state.next_proposal(1)
+    state.respond("select")
+    rendered = app.awtui_panes[1].text
+    assert "B" in rendered and "A" not in rendered
+
+
+def test_user_proposal_is_visible_and_can_be_replaced_before_commit():
+    app = build_application(
+        design_document="# Design\n\nBoundary phrase",
+        decisions=[{"point_id": "p", "anchor": "design:L2", "highlight": "Boundary phrase", "question": "Choose", "proposals": [{"label": "A"}, {"label": "B"}]}],
+    )
+    state = app.awtui_state
+    from awtui.discussion import Proposal
+    state.add_proposal(Proposal("User: C", "Because", .9, "Review cost"))
+    assert "✎ proposal" in app.awtui_panes[1].text
+    assert "User: C" in app.awtui_panes[1].text
+    state.respond("select")
+    assert "✅ answered" in app.awtui_panes[1].text
+    state.next_proposal(-2)
+    state.respond("select")
+    assert "A" in app.awtui_panes[1].text
+    assert "User: C" not in app.awtui_panes[1].text
+
+
 def test_run_application_reports_only_safe_status_after_interrupt():
     from awtui.live import run_application
 

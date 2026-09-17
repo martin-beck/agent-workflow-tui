@@ -78,3 +78,12 @@ def test_contradiction_requires_targeted_reopen():
         assert "contradictions" in str(error)
     else:
         raise AssertionError("contradictory reconciliation was accepted")
+
+
+def test_awg_event_preserves_explicit_decision_authority():
+    from awtui.awg import decision_event
+    from awtui.discussion import DecisionResponse
+    value = decision_event(DecisionResponse("design", "select", selected="a"), project_id="demo", ar_id="AR-0009", task_revision=2, packet_digest="sha256:" + "c" * 64, session_id="s", sequence=1)
+    assert value["event_type"] == "select"
+    assert value["payload"]["point_id"] == "design"
+    assert "implementation" not in value["payload"]

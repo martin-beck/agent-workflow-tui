@@ -43,3 +43,12 @@ def test_packet_preserves_ranked_proposals_and_identity():
     packet = DiscussionPacket("AR-0004", 2, (point,))
     assert packet.active().point_id == "design"
     assert packet.active().evidence_gap == "needs runtime evidence"
+
+
+def test_decision_session_keeps_responses_per_point_and_evaluates_added_proposal():
+    from awtui.discussion import DecisionResponse, DecisionSession, DiscussionPacket, PacketPoint, Proposal
+    proposals = (Proposal("a", "small", .8, "less scope"), Proposal("b", "safe", .6, "more work"))
+    packet = DiscussionPacket("AR-0005", 2, (PacketPoint("design", "design:42", "Which?", proposals, "impact"), PacketPoint("storage", "plan:8", "Where?", proposals, "impact")))
+    session = DecisionSession(packet)
+    session.respond(DecisionResponse("design", "select", selected="a", user_proposal=Proposal("c", "user", .5, "tradeoff"), user_proposal_evaluated=True))
+    assert session.unanswered() == ("storage",)

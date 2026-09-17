@@ -324,6 +324,12 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             payload = {"point_id": interaction.point.point_id}
             if response is not None:
                 payload.update({"disposition": response.disposition, "selected": response.selected})
+                request_id = getattr(interaction, "request_id", None)
+                if request_id:
+                    payload["request_id"] = request_id
+                candidate_id = getattr(interaction, "candidate_ids", {}).get(interaction.point.point_id, {}).get(response.selected)
+                if candidate_id:
+                    payload["selected_candidate"] = candidate_id
                 if response.user_proposal is not None:
                     payload["user_proposal"] = {"label": response.user_proposal.label, "evaluated": response.user_proposal_evaluated}
             acknowledgement = transport.submit(event_type, **payload)
@@ -569,13 +575,44 @@ def build_application_from_context(context: dict, *, decisions=None, on_event=No
     """Build the live UI from a Coordinator/AWG context, always rendering Markdown documents."""
     documents = context.get("documents", {})
     transport = LiveSessionTransport(context, record_event) if record_event is not None else None
-    return build_application(
+    application = build_application(
         design_document=documents.get("design", "# Design document\n\nNo design document supplied."),
         workplan=documents.get("workplan", "# Workplan\n\nNo workplan supplied."),
         decisions=decisions,
         on_event=on_event,
         transport=transport,
     )
+    application.interaction.request_id = context.get("request_id")
+    application.interaction.candidate_ids = {
+        item.get("point_id"): {proposal.get("label"): proposal.get("candidate_id") for proposal in item.get("proposals", []) if proposal.get("candidate_id")}
+        for item in (decisions or [])
+    }
+    return application
+
+
+def build_application_from_awg_request(request: dict, *, project_id: str, session_id: str, documents: dict[str, str] | None = None, on_event=None, record_event=None) -> Application:
+    """Build the live TUI directly from Guidance's decision-request schema."""
+    from .awg import request_to_tui
+    context, decisions = request_to_tui(request, project_id=project_id, session_id=session_id, documents=documents)
+    return build_application_from_context(context, decisions=decisions, on_event=on_event, record_event=record_event)
+
+
+def build_application_from_structure_graph(graph: dict, *, project_id: str, session_id: str, on_event=None, record_event=None) -> Application:
+    """Build the TUI from authoritative AR graph nodes and anchors."""
+    from .graph import structure_graph_to_tui
+    from .awg import request_digest
+    documents, decisions = structure_graph_to_tui(graph)
+    context = {
+        "project_id": project_id,
+        "ar_id": graph.get("ar_id", "AR-GRAPH"),
+        "task_revision": graph.get("task_revision", 1),
+        "packet_digest": graph.get("packet_digest", request_digest(graph)),
+        "session_id": session_id,
+        "contract_versions": {"awg": "0.2", "tui": "1", "awq": "1", "coordinator": "1"},
+        "request_id": graph.get("request_id"),
+        "documents": documents,
+    }
+    return build_application_from_context(context, decisions=decisions, on_event=on_event, record_event=record_event)
 
 
 def run_application(application: Application, *, output_fn=print) -> int:

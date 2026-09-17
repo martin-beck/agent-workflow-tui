@@ -54,3 +54,19 @@ revision-bound envelope. A rejected delivery is shown in the helper pane and
 does not commit the local decision response. The legacy `on_event` callback
 remains available for local demos and scenario replay, where event names are
 intentionally sufficient.
+
+Guidance schema 0.2 callers may use `request_to_tui` (or
+`build_application_from_awg_request`) to adapt a canonical decision request.
+The adapter preserves `request_id`, `task_ref`, revision, formal-check and
+quality/evidence references, and retains every `candidate_id`. TUI selections
+include both the display label and the stable `selected_candidate` ID in the
+revision-bound event payload, so Coordinator persistence and AWQ gates do not
+have to infer identity from presentation text.
+
+For source-driven sessions, `build_application_from_structure_graph` accepts
+the AR structure graph directly. Graph nodes are the sole owners of design and
+work-plan Markdown plus named anchors; each decision must reference an existing
+node/anchor whose text occurs in that node's document. The adapter fails closed
+on missing nodes, duplicate IDs, absent documents, or mismatched highlight text,
+then passes document-specific targets to the same renderer used by live
+sessions and scenario tests.

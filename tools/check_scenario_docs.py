@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check generated scenario documentation and screenshot artifacts."""
+"""Check generated scenario documentation, screenshots, and live recordings."""
 from __future__ import annotations
 
 import json
@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[1]
 SCREENSHOT_LINK = re.compile(r"^- \*\*Screenshot:\*\* \[open terminal capture\]\(([^)]+)\)$", re.MULTILINE)
+RECORDING_LINK = re.compile(r"^- \*\*Live recording:\*\* \[play asciinema recording\]\(([^)]+)\)$", re.MULTILINE)
 SCENARIO_ID = re.compile(r"^- \*\*Scenario ID:\*\* `([^`]+)`$", re.MULTILINE)
 
 
@@ -29,14 +30,33 @@ def check(root: Path = ROOT) -> list[str]:
         errors.append("SCENARIOS.md screenshot links do not match scenario IDs")
     if len(links) != len(expected_ids):
         errors.append("SCENARIOS.md does not contain exactly one screenshot per scenario")
+    recording_links = RECORDING_LINK.findall(docs)
+    expected_recordings = [f"recordings/{item['id']}.cast" for item in corpus["scenarios"]]
+    if recording_links != expected_recordings:
+        errors.append("SCENARIOS.md asciinema recording links do not match scenario IDs")
     expected_files = {root / "docs" / link for link in expected_links}
     actual_files = set((root / "docs/screenshots").glob("*.svg"))
     if actual_files != expected_files:
         errors.append("docs/screenshots contains stale or missing SVG artifacts")
+    expected_casts = {root / "docs" / link for link in expected_recordings}
+    actual_casts = set((root / "docs/recordings").glob("*.cast"))
+    if actual_casts != expected_casts:
+        errors.append("docs/recordings contains stale or missing asciinema artifacts")
+    for cast in sorted(expected_casts):
+        try:
+            lines = cast.read_text(encoding="utf-8").splitlines()
+            header = json.loads(lines[0])
+            if header.get("version") != 2 or not any(json.loads(line)[1] == "o" for line in lines[1:]):
+                errors.append(f"{cast.name}: invalid or empty asciinema v2 recording")
+        except (OSError, IndexError, ValueError, TypeError, KeyError):
+            errors.append(f"{cast.name}: cannot parse asciinema recording")
     for scenario_id, result in result_by_id.items():
         expected = root / result["screenshot"]
         if expected not in expected_files or not expected.is_file():
             errors.append(f"{scenario_id}: result screenshot is missing")
+        recording = root / result.get("recording", "")
+        if recording not in expected_casts or not recording.is_file():
+            errors.append(f"{scenario_id}: result recording is missing")
     if set(result_by_id) != set(expected_ids):
         errors.append("scenario-results IDs do not match corpus")
     if "../docs/" in docs or "file://" in docs:

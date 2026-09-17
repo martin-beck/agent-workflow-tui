@@ -12,4 +12,5 @@ def test_generated_docs_cover_every_scenario_and_screenshot():
     assert "open terminal capture" in text
     assert "privacy-safe" in text
     assert "(screenshots/basic-select.svg)" in text
+    assert "(recordings/basic-select.cast)" in text
     assert check(root) == []

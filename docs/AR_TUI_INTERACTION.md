@@ -37,6 +37,15 @@ request evidence, add a proposal, or select an answer. A later `enter` selection
 replaces that state with the selected-only, green-checkmarked answer; arrow
 navigation reopens it for revision.
 
+Adding an own proposal opens a four-line modal form (label, rationale,
+confidence, and trade-offs). Tab, Enter, and Up/Down move between fields; action
+letters are inserted as text while the form is active. After the final field,
+the TUI asks for an explicit Yes/No confirmation navigable with arrows and
+Enter. The decisions pane continuously reports selected, clarification,
+remaining, and saved counts. Attempting to quit with remaining work opens a
+second Yes/No prompt listing the exact decisions still needing selection or a
+save; choosing No keeps the session open.
+
 For a live Coordinator-backed session, callers use
 `build_application_from_context(context, decisions=..., record_event=...)`.
 The TUI wraps every accepted action in the context identity and monotonic

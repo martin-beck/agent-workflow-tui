@@ -1,234 +1,167 @@
-"""Prompt-toolkit live application shell; contracts remain toolkit-neutral."""
+"""Full-screen live interaction for Agent Workflow discussion packets."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Mapping, Sequence
-
+from dataclasses import replace
 from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import HSplit, Layout, VSplit
 from prompt_toolkit.widgets import Frame, TextArea
-
+from .discussion import DiscussionPacket, DecisionResponse, PacketPoint, Proposal
 
 RECORDED_CONTROLS = {"\n": "select", "\r": "select", "r": "reject", "c": "clarify", "m": "request-more-evidence", "a": "add-proposal", "s": "safe-exit", "o": "reopen"}
 
-
-@dataclass(frozen=True)
-class LiveDecision:
-    """A renderable decision row from an AR discussion packet.
-
-    The live shell deliberately accepts plain mappings too (the Coordinator
-    adapter can pass decoded JSON), while this type documents the small view
-    model needed by the renderer.
-    """
-
-    point_id: str
-    anchor: str
-    question: str
-    proposals: tuple[Mapping[str, Any], ...] = ()
-    helper: str = ""
-
-
-def _decision(value: LiveDecision | Mapping[str, Any]) -> LiveDecision:
-    if isinstance(value, LiveDecision):
-        return value
-    proposals = tuple(value.get("proposals", ()))
-    return LiveDecision(
-        point_id=str(value.get("point_id", value.get("id", "decision"))),
-        anchor=str(value.get("anchor", "document")),
-        question=str(value.get("question", "")),
-        proposals=proposals,
-        helper=str(value.get("helper", value.get("implications", ""))),
-    )
-
-
-class LiveViewState:
-    """Small, testable state machine for live document and decision focus."""
-
-    def __init__(self, *, workplan: str, design_document: str,
-                 decisions: Sequence[LiveDecision | Mapping[str, Any]],
-                 document_pane: TextArea, points_pane: TextArea,
-                 helper_pane: TextArea, on_event=None):
-        self.workplan = workplan
-        self.design_document = design_document
-        self.decisions = tuple(_decision(item) for item in decisions)
-        self.document_pane = document_pane
-        self.points_pane = points_pane
-        self.helper_pane = helper_pane
-        self.on_event = on_event
-        self.document_mode = "design"
-        self.decision_index = 0
-        self.proposal_index = 0
-        self.refresh()
-
-    @property
-    def active(self) -> LiveDecision | None:
-        return self.decisions[self.decision_index] if self.decisions else None
-
-    def refresh(self) -> None:
-        self.document_pane.text = self.design_document if self.document_mode == "design" else self.workplan
-        if not self.decisions:
-            return
-        point = self.active
-        rows = []
-        for index, decision in enumerate(self.decisions):
-            marker = "▶" if index == self.decision_index else " "
-            rows.append(f"{marker} {decision.point_id}  [{decision.anchor}]  {decision.question}")
-        self.points_pane.text = "\n".join(rows)
-        proposal = point.proposals[self.proposal_index] if point.proposals else {}
-        label = proposal.get("label", proposal.get("id", "")) if isinstance(proposal, Mapping) else str(proposal)
-        rationale = proposal.get("rationale", "") if isinstance(proposal, Mapping) else ""
-        tradeoffs = proposal.get("tradeoffs", "") if isinstance(proposal, Mapping) else ""
-        confidence = proposal.get("confidence", "") if isinstance(proposal, Mapping) else ""
-        self.helper_pane.text = "\n".join(filter(None, (
-            f"Decision: {point.question}",
-            f"Anchor: {point.anchor}",
-            f"Proposal {self.proposal_index + 1}/{len(point.proposals)}: {label}" if point.proposals else "No proposal selected",
-            f"Rationale: {rationale}" if rationale else "",
-            f"Trade-offs: {tradeoffs}" if tradeoffs else "",
-            f"Confidence: {confidence}" if confidence != "" else "",
-            point.helper,
-        )))
-
-    def move(self, delta: int) -> None:
-        if self.decisions:
-            self.decision_index = (self.decision_index + delta) % len(self.decisions)
-            self.proposal_index = 0
-            self.refresh()
-
-    def switch_document(self, mode: str | None = None) -> None:
-        self.document_mode = mode or ("workplan" if self.document_mode == "design" else "design")
-        self.refresh()
-
-    def next_proposal(self, delta: int) -> None:
-        if self.active and self.active.proposals:
-            self.proposal_index = (self.proposal_index + delta) % len(self.active.proposals)
-            self.refresh()
-
-    def emit(self, event_type: str) -> None:
-        if self.on_event is not None:
-            self.on_event(event_type)
-
-
 def dispatch_recorded_input(keys: str, on_event) -> list[str]:
-    """Replay bounded terminal keystrokes through the same public event names."""
     emitted = []
     for key in keys:
         if key in RECORDED_CONTROLS:
-            event_type = RECORDED_CONTROLS[key]
-            emitted.append(event_type)
-            on_event(event_type)
+            emitted.append(RECORDED_CONTROLS[key]); on_event(RECORDED_CONTROLS[key])
         elif key in {"q", "\x1b"}:
             break
     return emitted
 
+class LiveInteraction:
+    """Mutable view-model for point/proposal selection and batch responses."""
+    def __init__(self, packet: DiscussionPacket):
+        self.packet, self.point_index, self.proposal_index = packet, 0, 0
+        self.document_mode = packet.document
+        self.responses: dict[str, DecisionResponse] = {}
+        self.input_mode = False
+    @property
+    def point(self): return self.packet.points[self.point_index]
+    @property
+    def proposal(self): return self.point.proposals[self.proposal_index]
+    def move_point(self, delta: int):
+        self.point_index = max(0, min(len(self.packet.points)-1, self.point_index + delta)); self.proposal_index = 0
+    def move_proposal(self, delta: int):
+        self.proposal_index = max(0, min(len(self.point.proposals)-1, self.proposal_index + delta))
+    def add_proposal(self, proposal: Proposal):
+        point = replace(self.point, proposals=self.point.proposals + (proposal,))
+        self.packet = replace(self.packet, points=self.packet.points[:self.point_index] + (point,) + self.packet.points[self.point_index+1:])
+        self.proposal_index = len(point.proposals)-1
+        self._refresh_callback()
+    def respond(self, disposition: str) -> DecisionResponse:
+        user = self.proposal if self.proposal.label.startswith("User: ") else None
+        response = DecisionResponse(self.point.point_id, disposition, self.proposal.label if disposition == "select" else None, user, user is not None)
+        self.responses[self.point.point_id] = response
+        return response
+    def render_points(self) -> str:
+        lines = []
+        for i, point in enumerate(self.packet.points):
+            lines.append(f"{'▶' if i == self.point_index else ' '} {point.point_id} [{'answered' if point.point_id in self.responses else 'unresolved'}]  {point.anchor}")
+        lines += ["", f"Decision: {self.point.question}"]
+        lines += [f"  {'▶' if i == self.proposal_index else ' '} {p.label}" for i, p in enumerate(self.point.proposals)]
+        return "\n".join(lines)
+    def render_helper(self) -> str:
+        p = self.proposal
+        return f"Proposal {self.proposal_index + 1}/{len(self.point.proposals)}: {p.label}\n\nRationale: {p.rationale}\nConfidence: {p.confidence:.2f}\nTrade-offs: {p.tradeoffs}\n\nAnchor: {self.point.anchor}\nImplications: {self.point.implications}\nEvidence gap: {self.point.evidence_gap or 'none recorded'}\nHuman intent is separate from implementation and quality evidence."
 
-def build_application(*, document: str = "Awaiting AR context", points: str = "No discussion points", helper: str = "Select a point for implications and evidence", on_event=None, workplan: str | None = None, design_document: str | None = None, decisions: Sequence[LiveDecision | Mapping[str, Any]] = ()) -> Application:
-    """Build the live full-screen client with real focus and document state.
+    def switch_document(self):
+        self.document_mode = "workplan" if self.document_mode != "workplan" else "design"
+        self._refresh_callback()
 
-    ``document``/``points`` remain supported for lightweight callers. Live
-    Coordinator clients should provide both documents and structured
-    ``decisions`` so navigation is anchored to the exact AR packet.
-    """
-    design_text = design_document if design_document is not None else document
-    plan_text = workplan if workplan is not None else "Workplan unavailable for this AR"
-    left = TextArea(text=design_text, read_only=True, scrollbar=True)
-    right = TextArea(text=points, read_only=True, scrollbar=True)
-    helper_view = TextArea(text=helper, read_only=True, scrollbar=True)
-    footer = TextArea(text="q: quit  tab/w/d: workplan/design  ↑/↓: decision  ←/→: proposal  enter: select  r: reject  c: clarify  m: evidence  a: add  s: save  o: reopen", read_only=True, height=1)
-    bindings = KeyBindings()
+    # Compatibility names used by scenario drivers and a convenient public UI API.
+    def move(self, delta: int):
+        self.move_point(delta)
+        self._refresh_callback()
 
-    @bindings.add("q")
-    @bindings.add("escape")
-    def quit_app(event) -> None:
-        event.app.exit(result=0)
+    def next_proposal(self, delta: int):
+        self.move_proposal(delta)
+        self._refresh_callback()
 
-    def emit(event, event_type: str) -> None:
-        if on_event is not None:
-            on_event(event_type)
+    def _refresh_callback(self):
+        if hasattr(self, "_refresh"): self._refresh()
 
-    state = LiveViewState(
-        workplan=plan_text,
-        design_document=design_text,
-        decisions=decisions,
-        document_pane=left,
-        points_pane=right,
-        helper_pane=helper_view,
-        on_event=on_event,
-    )
+def _default_packet(document: str, points: str) -> DiscussionPacket:
+    p = Proposal("Review in context", "Inspect the highlighted material", .7, "Requires human review")
+    q = Proposal("Request evidence", "Ask for evidence before deciding", .8, "Delays the decision")
+    return DiscussionPacket("interactive", 1, (PacketPoint("point-1", "document:1", points, (p, q), "Review downstream effects", "Evidence is synthetic"),), document=document)
 
-    # These bindings are eager because TextArea has its own cursor navigation;
-    # the AR discussion list, rather than the text cursor, is the live focus.
-    @bindings.add("up", eager=True)
-    def previous_decision(event) -> None:
-        state.move(-1)
-
-    @bindings.add("down", eager=True)
-    def next_decision(event) -> None:
-        state.move(1)
-
-    @bindings.add("left", eager=True)
-    def previous_proposal(event) -> None:
-        state.next_proposal(-1)
-
-    @bindings.add("right", eager=True)
-    def next_proposal(event) -> None:
-        state.next_proposal(1)
-
-    @bindings.add("tab", eager=True)
-    def toggle_document(event) -> None:
-        state.switch_document()
-
-    @bindings.add("w", eager=True)
-    def show_workplan(event) -> None:
-        state.switch_document("workplan")
-
-    @bindings.add("d", eager=True)
-    def show_design(event) -> None:
-        state.switch_document("design")
-
-    for key, event_type in (("enter", "select"), ("r", "reject"), ("c", "clarify"), ("m", "request-more-evidence"), ("a", "add-proposal"), ("s", "safe-exit"), ("o", "reopen")):
-        @bindings.add(key)
-        def control(event, event_type=event_type) -> None:
-            emit(event, event_type)
-
-    body = HSplit([VSplit([Frame(left, title="AR document"), Frame(right, title="Discussion points")]), Frame(helper_view, title="Proposal / implications"), footer])
-    # Ask prompt-toolkit to clear its final frame while it restores raw mode
-    # and the alternate screen.  This prevents the last rendered frame from
-    # being left in the user's shell after q/Escape, SIGINT, an exception, or
-    # a resize-triggered redraw.
-    application = Application(
-        layout=Layout(body), key_bindings=bindings, full_screen=True,
-        erase_when_done=True,
-    )
-    application.awtui_panes = (left, right, helper_view)
-    application.awtui_footer = footer
-    application.awtui_state = state
-    return application
+def _packet_from_decisions(decisions, design_document: str, workplan: str) -> DiscussionPacket:
+    points = []
+    for raw in decisions:
+        proposals = tuple(Proposal(p.get("label", "Proposal"), p.get("rationale", "No rationale recorded"), float(p.get("confidence", .5)), p.get("tradeoffs", "No trade-offs recorded")) for p in raw.get("proposals", []))
+        while len(proposals) < 2:
+            proposals += (Proposal("Request evidence", "Gather missing evidence", .5, "Delays decision"),)
+        points.append(PacketPoint(raw["point_id"], raw.get("anchor", "document:1"), raw.get("question", "What should happen?"), proposals, raw.get("helper", raw.get("implications", "Review downstream implications")), raw.get("evidence_gap", "")))
+    return DiscussionPacket("interactive", 1, tuple(points), "design")
 
 
-def run_application(application: Application, *, output_fn=print) -> int:
-    """Run the app with prompt-toolkit cleanup on every exit path.
-
-    prompt-toolkit's ``run_async`` owns raw mode, alternate-screen setup,
-    resize handling, and renderer reset in a ``finally`` block.  Disabling its
-    interactive exception screen lets this boundary report a short,
-    privacy-safe status after that cleanup has completed.
-    """
+def run_application(application, *, output_fn=print) -> int:
+    """Run a live app while restoring the terminal and redacting failures."""
     try:
-        result = application.run(set_exception_handler=False, handle_sigint=True)
+        application.run()
+        return 0
     except KeyboardInterrupt:
         output_fn("TUI interrupted; terminal restored.")
         return 130
-    except EOFError:
-        output_fn("TUI input closed; terminal restored.")
-        return 0
-    except BaseException as error:
-        # Do not expose traceback, packet contents, prompts, or host paths.
+    except Exception as error:  # noqa: BLE001 - public boundary intentionally redacts details
         output_fn(f"TUI stopped ({type(error).__name__}); terminal restored.")
         return 1
-    return int(result or 0)
 
 
-def main() -> int:
-    return run_application(build_application())
+def build_application(*, document: str = "Awaiting AR context", points: str = "No discussion points", helper: str = "Select a point for implications and evidence", on_event=None, packet: DiscussionPacket | None = None, workplan: str = "Awaiting workplan", design_document: str | None = None, decisions=None) -> Application:
+    design_document = design_document if design_document is not None else document
+    packet = packet or (_packet_from_decisions(decisions, design_document, workplan) if decisions else None)
+    interaction = LiveInteraction(packet or _default_packet(design_document, points))
+    document_view = TextArea(text=design_document, read_only=True, scrollbar=True)
+    points_view = TextArea(text=interaction.render_points() if packet else points, read_only=True, scrollbar=True)
+    helper_view = TextArea(text=interaction.render_helper() if packet else helper, read_only=True, scrollbar=True)
+    editor = TextArea(text="", multiline=True, scrollbar=True, height=3, prompt="New proposal (label | rationale | confidence | trade-offs): ")
+    editor.visible = False
+    footer = TextArea(text="↑/↓: decision  ←/→: proposal  tab/w/d: workplan/design  enter: select  r: reject  c: clarify  m: evidence  a: add proposal  s: save  o: reopen  q: quit", read_only=True, height=1)
+    bindings = KeyBindings()
+    def refresh():
+        points_view.text = interaction.render_points() if packet else points
+        helper_view.text = ("Enter: label | rationale | confidence (0..1) | trade-offs" if interaction.input_mode else (interaction.render_helper() if packet else helper))
+        document_view.text = workplan if interaction.document_mode == "workplan" else design_document
+    def emit(event, event_type):
+        if packet and event_type in {"select", "reject", "clarify"}: interaction.respond(event_type)
+        refresh()
+        if on_event is not None: on_event(event_type)
+    @bindings.add("q")
+    @bindings.add("escape")
+    def quit_app(event):
+        if interaction.input_mode:
+            interaction.input_mode = False; editor.visible = False; editor.text = ""; event.app.layout.focus(points_view); refresh()
+        else: event.app.exit(result=0)
+    @bindings.add("up")
+    def up(event): interaction.move_point(-1); refresh()
+    @bindings.add("down")
+    def down(event): interaction.move_point(1); refresh()
+    @bindings.add("left")
+    def left(event): interaction.move_proposal(-1); refresh()
+    @bindings.add("right")
+    def right(event): interaction.move_proposal(1); refresh()
+    @bindings.add("tab")
+    def toggle_document(event): interaction.switch_document(); refresh()
+    @bindings.add("w")
+    def workplan_key(event): interaction.document_mode = "workplan"; refresh()
+    @bindings.add("d")
+    def design_key(event): interaction.document_mode = "design"; refresh()
+    @bindings.add("enter")
+    def enter(event):
+        if interaction.input_mode:
+            fields = [x.strip() for x in editor.text.split("|", 3)]
+            try:
+                if len(fields) != 4 or not fields[0] or not fields[1] or not fields[3]: raise ValueError
+                proposal = Proposal("User: " + fields[0], fields[1], float(fields[2]), fields[3])
+            except (ValueError, TypeError): helper_view.text = "Invalid proposal. Use label | rationale | confidence (0..1) | trade-offs"; return
+            interaction.add_proposal(proposal); interaction.input_mode = False; editor.visible = False; editor.text = ""; event.app.layout.focus(points_view); emit(event, "add-proposal"); return
+        emit(event, "select")
+    for key, event_type in (("r", "reject"), ("c", "clarify"), ("m", "request-more-evidence"), ("s", "safe-exit"), ("o", "reopen")):
+        @bindings.add(key)
+        def control(event, event_type=event_type): emit(event, event_type)
+    @bindings.add("a")
+    def add(event):
+        if event.app is None:
+            emit(event, "add-proposal")
+            return
+        interaction.input_mode = True; editor.visible = True; event.app.layout.focus(editor); refresh()
+    body = HSplit([VSplit([Frame(document_view, title="Design / Workplan"), Frame(points_view, title="Decisions and proposals")]), Frame(helper_view, title="Helper: rationale, implications, evidence"), editor, footer])
+    application = Application(layout=Layout(body), key_bindings=bindings, full_screen=True)
+    interaction._refresh = refresh
+    application.awtui_panes = (document_view, points_view, helper_view); application.awtui_footer = footer; application.editor = editor; application.interaction = interaction; application.awtui_state = interaction
+    application.erase_when_done = True
+    return application
+
+def main() -> int: return int(build_application().run())

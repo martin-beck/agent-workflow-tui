@@ -6,6 +6,7 @@
         "select"
       ],
       "id": "basic-select",
+      "recording": "docs/recordings/basic-select.cast",
       "screenshot": "docs/screenshots/basic-select.svg",
       "title": "Select ranked option"
     },
@@ -15,6 +16,7 @@
         "reject"
       ],
       "id": "reject-risk",
+      "recording": "docs/recordings/reject-risk.cast",
       "screenshot": "docs/screenshots/reject-risk.svg",
       "title": "Reject risky proposal"
     },
@@ -24,6 +26,7 @@
         "clarify"
       ],
       "id": "clarify-ownership",
+      "recording": "docs/recordings/clarify-ownership.cast",
       "screenshot": "docs/screenshots/clarify-ownership.svg",
       "title": "Clarify ownership boundary"
     },
@@ -33,6 +36,7 @@
         "request-more-evidence"
       ],
       "id": "more-evidence",
+      "recording": "docs/recordings/more-evidence.cast",
       "screenshot": "docs/screenshots/more-evidence.svg",
       "title": "Request rollout evidence"
     },
@@ -43,6 +47,7 @@
         "select"
       ],
       "id": "add-alternative",
+      "recording": "docs/recordings/add-alternative.cast",
       "screenshot": "docs/screenshots/add-alternative.svg",
       "title": "Add oracle alternative"
     },
@@ -52,6 +57,7 @@
         "safe-exit"
       ],
       "id": "safe-exit",
+      "recording": "docs/recordings/safe-exit.cast",
       "screenshot": "docs/screenshots/safe-exit.svg",
       "title": "Save before interruption"
     },
@@ -61,6 +67,7 @@
         "reopen"
       ],
       "id": "targeted-reopen",
+      "recording": "docs/recordings/targeted-reopen.cast",
       "screenshot": "docs/screenshots/targeted-reopen.svg",
       "title": "Reopen contradicted point"
     },
@@ -70,6 +77,7 @@
         "select"
       ],
       "id": "batch-partial",
+      "recording": "docs/recordings/batch-partial.cast",
       "screenshot": "docs/screenshots/batch-partial.svg",
       "title": "Answer one of three batched points"
     },
@@ -80,6 +88,7 @@
         "select"
       ],
       "id": "batch-clarify",
+      "recording": "docs/recordings/batch-clarify.cast",
       "screenshot": "docs/screenshots/batch-clarify.svg",
       "title": "Clarify then select independent points"
     },
@@ -87,6 +96,7 @@
       "decision_count": 3,
       "events": [],
       "id": "escape-exit",
+      "recording": "docs/recordings/escape-exit.cast",
       "screenshot": "docs/screenshots/escape-exit.svg",
       "title": "Escape cancels live session"
     },
@@ -97,6 +107,7 @@
         "clarify"
       ],
       "id": "reask-after-gap",
+      "recording": "docs/recordings/reask-after-gap.cast",
       "screenshot": "docs/screenshots/reask-after-gap.svg",
       "title": "Re-ask after evidence gap"
     },
@@ -107,6 +118,7 @@
         "reject"
       ],
       "id": "proposal-reject",
+      "recording": "docs/recordings/proposal-reject.cast",
       "screenshot": "docs/screenshots/proposal-reject.svg",
       "title": "Reject oracle-added proposal"
     },
@@ -117,6 +129,7 @@
         "clarify"
       ],
       "id": "revision-reopen",
+      "recording": "docs/recordings/revision-reopen.cast",
       "screenshot": "docs/screenshots/revision-reopen.svg",
       "title": "Reopen after revision change"
     },
@@ -127,6 +140,7 @@
         "safe-exit"
       ],
       "id": "transport-roundtrip",
+      "recording": "docs/recordings/transport-roundtrip.cast",
       "screenshot": "docs/screenshots/transport-roundtrip.svg",
       "title": "Complete transport round trip"
     },
@@ -140,6 +154,7 @@
         "safe-exit"
       ],
       "id": "full-contest",
+      "recording": "docs/recordings/full-contest.cast",
       "screenshot": "docs/screenshots/full-contest.svg",
       "title": "Contest and resolve a decision"
     },
@@ -150,6 +165,7 @@
         "reject"
       ],
       "id": "evidence-then-reject",
+      "recording": "docs/recordings/evidence-then-reject.cast",
       "screenshot": "docs/screenshots/evidence-then-reject.svg",
       "title": "Reject after evidence review"
     },
@@ -160,6 +176,7 @@
         "safe-exit"
       ],
       "id": "reopen-save",
+      "recording": "docs/recordings/reopen-save.cast",
       "screenshot": "docs/screenshots/reopen-save.svg",
       "title": "Reopen and persist unresolved conflict"
     },
@@ -171,6 +188,7 @@
         "select"
       ],
       "id": "alternative-clarify",
+      "recording": "docs/recordings/alternative-clarify.cast",
       "screenshot": "docs/screenshots/alternative-clarify.svg",
       "title": "Clarify an added alternative before choosing"
     },
@@ -180,6 +198,7 @@
         "request-more-evidence"
       ],
       "id": "cancel-after-review",
+      "recording": "docs/recordings/cancel-after-review.cast",
       "screenshot": "docs/screenshots/cancel-after-review.svg",
       "title": "Cancel after reviewing evidence"
     },
@@ -192,10 +211,52 @@
         "safe-exit"
       ],
       "id": "multi-point-handoff",
+      "recording": "docs/recordings/multi-point-handoff.cast",
       "screenshot": "docs/screenshots/multi-point-handoff.svg",
       "title": "Resolve points then hand off safely"
+    },
+    {
+      "decision_count": 3,
+      "events": [
+        "select"
+      ],
+      "id": "navigate-documents",
+      "recording": "docs/recordings/navigate-documents.cast",
+      "screenshot": "docs/screenshots/navigate-documents.svg",
+      "title": "Navigate decisions and documents"
+    },
+    {
+      "decision_count": 3,
+      "events": [
+        "select",
+        "select"
+      ],
+      "id": "revise-selection",
+      "recording": "docs/recordings/revise-selection.cast",
+      "screenshot": "docs/screenshots/revise-selection.svg",
+      "title": "Revise a selected proposal"
+    },
+    {
+      "decision_count": 3,
+      "events": [],
+      "id": "explicit-document-views",
+      "recording": "docs/recordings/explicit-document-views.cast",
+      "screenshot": "docs/screenshots/explicit-document-views.svg",
+      "title": "Inspect workplan and design views"
+    },
+    {
+      "decision_count": 3,
+      "events": [
+        "add-proposal",
+        "select",
+        "select"
+      ],
+      "id": "proposal-with-navigation",
+      "recording": "docs/recordings/proposal-with-navigation.cast",
+      "screenshot": "docs/screenshots/proposal-with-navigation.svg",
+      "title": "Add and revise a proposal after document review"
     }
   ],
-  "scenario_count": 20,
+  "scenario_count": 24,
   "schema_version": 1
 }

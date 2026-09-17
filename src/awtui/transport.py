@@ -65,13 +65,18 @@ class LiveSessionTransport:
         envelope = SessionEnvelope(self.boundary.project_id, self.boundary.ar_id, self.boundary.task_revision, self.boundary.packet_digest, self.boundary.session_id, sequence, event_type)
         event = envelope.as_event(**payload)
         try:
-            self.boundary = self.boundary.accept(event)
+            # Validate against the current boundary, but do not commit the
+            # sequence until the receiver has acknowledged delivery. A
+            # rejected/dropped event must not consume a sequence number: the
+            # caller must be able to retry the same revision-bound event.
+            candidate_boundary = self.boundary.accept(event)
         except ValueError as exc:
             return EventAcknowledgement(envelope.session_id, sequence, False, str(exc))
         for _attempt in self.policy.attempts():
             try:
                 result = self.deliver(event)
                 if result is not False:
+                    self.boundary = candidate_boundary
                     return EventAcknowledgement(envelope.session_id, sequence, True)
             except Exception as exc:  # transport failures are retried, never fabricated as success
                 reason = str(exc)

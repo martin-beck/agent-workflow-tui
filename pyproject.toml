@@ -9,5 +9,10 @@ description = "Interactive human-in-the-loop terminal UI for Agent Workflow"
 requires-python = ">=3.11"
 dependencies = ["prompt-toolkit==3.0.51", "rich==14.2.0"]
 
+[project.optional-dependencies]
+# Used by the scenario generator/CI to validate and play generated terminal
+# animations. The committed recordings use asciinema v2 cast format.
+capture = ["asciinema==2.4.0"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]

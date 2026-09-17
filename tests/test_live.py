@@ -40,12 +40,15 @@ def test_live_navigation_switches_documents_and_tracks_decision_anchor():
     state.move(1)
     assert "▶ rollout" in app.awtui_panes[1].text
     assert "Anchor: plan:L4" in app.awtui_panes[2].text
+    # A decision anchored in the workplan follows its authoritative document
+    # automatically so the highlighted text is visible immediately.
+    assert state.document_mode == "workplan"
     state.next_proposal(1)
     assert "Proposal 2/2: direct" in app.awtui_panes[2].text
     state.switch_document()
-    assert state.document_mode == "workplan"
+    assert state.document_mode == "design"
     assert app.awtui_panes[0].text.startswith("▶ ACTIVE DECISION ANCHOR: plan:L4")
-    assert "WORKPLAN: ship parser" in app.awtui_panes[0].text
+    assert "DESIGN: parser boundary" in app.awtui_panes[0].text
     assert "ACTIVE DECISION ANCHOR: plan:L4" in app.awtui_panes[0].text
 
 
@@ -107,6 +110,36 @@ def test_user_proposal_is_visible_and_can_be_replaced_before_commit():
     state.respond("select")
     assert "A" in app.awtui_panes[1].text
     assert "User: C" not in app.awtui_panes[1].text
+
+
+def test_arrow_navigation_reopens_answered_decision_before_replacement():
+    app = build_application(
+        design_document="# Design\n\nBoundary phrase",
+        decisions=[{"point_id": "p", "anchor": "design:L2", "highlight": "Boundary phrase", "question": "Choose", "proposals": [{"label": "A"}, {"label": "B"}]}],
+    )
+    state = app.awtui_state
+    state.respond("select")
+    assert "✅ answered" in app.awtui_panes[1].text
+    assert "A" in app.awtui_panes[1].text and "B" not in app.awtui_panes[1].text
+
+    # Navigating to another candidate makes the provisional answer editable;
+    # both candidates become visible and Enter can commit the replacement.
+    state.next_proposal(1)
+    assert "unresolved" in app.awtui_panes[1].text
+    assert "A" in app.awtui_panes[1].text and "B" in app.awtui_panes[1].text
+    state.respond("select")
+    assert "✅ answered" in app.awtui_panes[1].text
+    assert "B" in app.awtui_panes[1].text and "A" not in app.awtui_panes[1].text
+
+
+def test_plan_anchor_follows_workplan_document_on_decision_change():
+    app = build_application(
+        design_document="# Design\n\nBoundary phrase",
+        workplan="# Workplan\n\nRollout phrase",
+        decisions=[{"point_id": "p", "anchor": "plan:L2", "highlight": "Rollout phrase", "question": "Choose", "proposals": [{"label": "A"}, {"label": "B"}]}],
+    )
+    assert app.awtui_state.document_mode == "workplan"
+    assert "Rollout phrase" in app.awtui_panes[0].text
 
 
 def test_run_application_reports_only_safe_status_after_interrupt():

@@ -25,3 +25,9 @@ def test_lifecycle_checker_rejects_skipped_gate(tmp_path):
     fixture.write_text(json.dumps(value))
     result = subprocess.run([sys.executable, str(root / "tools/check_lifecycle.py"), str(fixture)], cwd=root)
     assert result.returncode != 0
+
+
+def test_transport_atomicity_checker_passes():
+    root = Path(__file__).parents[1]
+    result = subprocess.run([sys.executable, str(root / "tools/check_transport_atomicity.py")], cwd=root)
+    assert result.returncode == 0

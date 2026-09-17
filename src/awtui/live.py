@@ -35,6 +35,13 @@ class LiveInteraction:
     def move_point(self, delta: int):
         self.point_index = max(0, min(len(self.packet.points)-1, self.point_index + delta)); self.proposal_index = 0
     def move_proposal(self, delta: int):
+        # A previously selected proposal is provisional until the user leaves
+        # the current choice.  Moving left/right explicitly re-opens the
+        # decision so every candidate is visible and the next Enter can
+        # replace the prior answer.  This avoids navigating hidden candidates
+        # while retaining the compact, selected-only view at rest.
+        if delta and self.point.point_id in self.responses:
+            del self.responses[self.point.point_id]
         self.proposal_index = max(0, min(len(self.point.proposals)-1, self.proposal_index + delta))
     def add_proposal(self, proposal: Proposal):
         point = replace(self.point, proposals=self.point.proposals + (proposal,))
@@ -155,7 +162,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             interaction._manual_document_switch = False
             if follow_anchor and phrase.casefold() not in rendered.casefold():
                 target = point.anchor.split(":", 1)[0].lower()
-                if target == "workplan" and interaction.document_mode != "workplan":
+                if target in {"workplan", "plan"} and interaction.document_mode != "workplan":
                     interaction.document_mode = "workplan"
                     rendered = render_markdown(workplan)
                 elif target == "design" and interaction.document_mode != "design":
@@ -186,9 +193,12 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     @bindings.add("q")
     @bindings.add("escape")
     def quit_app(event):
-        if interaction.input_mode:
+        if interaction.input_mode and event.key_sequence[0].key == "escape":
             interaction.input_mode = False; editor.visible = False; editor.text = ""; event.app.layout.focus(points_view); refresh()
-        else: event.app.exit(result=0)
+        elif interaction.input_mode:
+            event.app.current_buffer.insert_text(event.key_sequence[0].key)
+        elif not event.app.is_done:
+            event.app.exit(result=0)
     @bindings.add("up")
     def up(event): interaction.move_point(-1); refresh()
     @bindings.add("down")
@@ -225,11 +235,18 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         emit(event, "select")
     for key, event_type in (("r", "reject"), ("c", "clarify"), ("m", "request-more-evidence"), ("s", "safe-exit"), ("o", "reopen")):
         @bindings.add(key)
-        def control(event, event_type=event_type): emit(event, event_type)
+        def control(event, event_type=event_type, key=key):
+            if interaction.input_mode:
+                event.app.current_buffer.insert_text(key)
+                return
+            emit(event, event_type)
     @bindings.add("a")
     def add(event):
         if event.app is None:
             emit(event, "add-proposal")
+            return
+        if interaction.input_mode:
+            event.app.current_buffer.insert_text("a")
             return
         interaction.input_mode = True; editor.visible = True; event.app.layout.focus(editor); refresh()
     body = HSplit([VSplit([Frame(document_view, title="Design / Workplan"), Frame(points_view, title="Decisions and proposals")]), Frame(helper_view, title="Helper: rationale, implications, evidence"), editor, footer])

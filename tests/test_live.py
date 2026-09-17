@@ -44,7 +44,8 @@ def test_live_navigation_switches_documents_and_tracks_decision_anchor():
     assert "Proposal 2/2: direct" in app.awtui_panes[2].text
     state.switch_document()
     assert state.document_mode == "workplan"
-    assert app.awtui_panes[0].text.startswith("WORKPLAN: ship parser")
+    assert app.awtui_panes[0].text.startswith("▶ ACTIVE DECISION ANCHOR: plan:L4")
+    assert "WORKPLAN: ship parser" in app.awtui_panes[0].text
     assert "ACTIVE DECISION ANCHOR: plan:L4" in app.awtui_panes[0].text
 
 

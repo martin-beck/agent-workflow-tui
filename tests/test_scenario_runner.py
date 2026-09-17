@@ -50,3 +50,14 @@ def test_runner_rejects_invalid_corpus_before_writing_outputs(tmp_path):
     with pytest.raises(ValueError, match="invalid scenario corpus"):
         generate(root)
     assert not (root / "docs").exists()
+
+
+def test_runner_rejects_unsafe_scenario_id_before_writing_outputs(tmp_path):
+    root = tmp_path / "repo"
+    (root / "scenarios").mkdir(parents=True)
+    corpus = json.loads((Path(__file__).parents[1] / "scenarios/corpus.json").read_text(encoding="utf-8"))
+    corpus["scenarios"][0]["id"] = "../outside"
+    (root / "scenarios/corpus.json").write_text(json.dumps(corpus), encoding="utf-8")
+    with pytest.raises(ValueError, match="unsafe scenario id"):
+        generate(root)
+    assert not (root / "docs").exists()

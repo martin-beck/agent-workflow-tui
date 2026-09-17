@@ -43,6 +43,23 @@ class DiscussionPacket:
     def active(self, index: int = 0) -> PacketPoint:
         return self.points[max(0, min(index, len(self.points) - 1))]
 
+    def batch_status(self, responses: dict[str, "DecisionResponse"] | None = None) -> tuple[str, ...]:
+        """Return stable per-point status lines for a batched live view."""
+        responses = responses or {}
+        return tuple(
+            f"{point.point_id}: {'answered' if point.point_id in responses else 'unresolved'}"
+            for point in self.points
+        )
+
+
+def render_batch(packet: DiscussionPacket, responses: dict[str, "DecisionResponse"] | None = None, *, coupling_warning: str = "") -> str:
+    """Render an identity-preserving batch, including partial progress and coupling warnings."""
+    lines = [f"AR {packet.ar_id} revision {packet.task_revision} | batch {len(packet.points)} points"]
+    if coupling_warning:
+        lines.append(f"COUPLING WARNING: {coupling_warning}")
+    lines.extend(packet.batch_status(responses))
+    return "\n".join(lines)
+
 
 @dataclass(frozen=True)
 class DecisionResponse:

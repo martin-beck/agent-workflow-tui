@@ -16,3 +16,6 @@ Keep runtime dependencies pinned and bounded. Do not include credentials,
 private prompts, raw transcripts, host paths, or unbounded terminal output in
 public artifacts. Commits require DCO signoff and reviewed pull requests.
 
+The live renderer may use a pinned Python TUI toolkit when it materially
+improves pane layout and input handling. Toolkit code remains an adapter layer;
+the public AR/TUI envelopes and ownership rules stay toolkit-neutral.

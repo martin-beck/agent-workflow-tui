@@ -11,6 +11,7 @@ def test_scenario_runner_replays_every_input_and_writes_screenshots(tmp_path):
     expected_count = len(json.loads((root / "scenarios/corpus.json").read_text())["scenarios"])
     assert result["scenario_count"] == expected_count
     assert all((root / item["screenshot"]).is_file() for item in result["results"])
+    assert all(item["decision_count"] >= 2 for item in result["results"])
     assert json.loads((root / "artifacts/scenario-results.json").read_text())["scenario_count"] == expected_count
 
 

@@ -1,6 +1,7 @@
 {
   "results": [
     {
+      "decision_count": 3,
       "events": [
         "select"
       ],
@@ -9,6 +10,7 @@
       "title": "Select ranked option"
     },
     {
+      "decision_count": 3,
       "events": [
         "reject"
       ],
@@ -17,6 +19,7 @@
       "title": "Reject risky proposal"
     },
     {
+      "decision_count": 3,
       "events": [
         "clarify"
       ],
@@ -25,6 +28,7 @@
       "title": "Clarify ownership boundary"
     },
     {
+      "decision_count": 3,
       "events": [
         "request-more-evidence"
       ],
@@ -33,6 +37,7 @@
       "title": "Request rollout evidence"
     },
     {
+      "decision_count": 3,
       "events": [
         "add-proposal",
         "select"
@@ -42,6 +47,7 @@
       "title": "Add oracle alternative"
     },
     {
+      "decision_count": 3,
       "events": [
         "safe-exit"
       ],
@@ -50,6 +56,7 @@
       "title": "Save before interruption"
     },
     {
+      "decision_count": 3,
       "events": [
         "reopen"
       ],
@@ -58,6 +65,7 @@
       "title": "Reopen contradicted point"
     },
     {
+      "decision_count": 3,
       "events": [
         "select"
       ],
@@ -66,6 +74,7 @@
       "title": "Answer one of three batched points"
     },
     {
+      "decision_count": 3,
       "events": [
         "clarify",
         "select"
@@ -75,12 +84,14 @@
       "title": "Clarify then select independent points"
     },
     {
+      "decision_count": 3,
       "events": [],
       "id": "escape-exit",
       "screenshot": "docs/screenshots/escape-exit.svg",
       "title": "Escape cancels live session"
     },
     {
+      "decision_count": 3,
       "events": [
         "request-more-evidence",
         "clarify"
@@ -90,6 +101,7 @@
       "title": "Re-ask after evidence gap"
     },
     {
+      "decision_count": 3,
       "events": [
         "add-proposal",
         "reject"
@@ -99,6 +111,7 @@
       "title": "Reject oracle-added proposal"
     },
     {
+      "decision_count": 3,
       "events": [
         "reopen",
         "clarify"
@@ -108,6 +121,7 @@
       "title": "Reopen after revision change"
     },
     {
+      "decision_count": 3,
       "events": [
         "select",
         "safe-exit"
@@ -117,6 +131,7 @@
       "title": "Complete transport round trip"
     },
     {
+      "decision_count": 3,
       "events": [
         "clarify",
         "request-more-evidence",
@@ -129,6 +144,7 @@
       "title": "Contest and resolve a decision"
     },
     {
+      "decision_count": 3,
       "events": [
         "request-more-evidence",
         "reject"
@@ -138,6 +154,7 @@
       "title": "Reject after evidence review"
     },
     {
+      "decision_count": 3,
       "events": [
         "reopen",
         "safe-exit"
@@ -147,6 +164,7 @@
       "title": "Reopen and persist unresolved conflict"
     },
     {
+      "decision_count": 3,
       "events": [
         "add-proposal",
         "clarify",
@@ -157,6 +175,7 @@
       "title": "Clarify an added alternative before choosing"
     },
     {
+      "decision_count": 3,
       "events": [
         "request-more-evidence"
       ],
@@ -165,6 +184,7 @@
       "title": "Cancel after reviewing evidence"
     },
     {
+      "decision_count": 3,
       "events": [
         "select",
         "clarify",

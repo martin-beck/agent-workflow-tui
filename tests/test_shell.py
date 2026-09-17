@@ -52,3 +52,17 @@ def test_decision_session_keeps_responses_per_point_and_evaluates_added_proposal
     session = DecisionSession(packet)
     session.respond(DecisionResponse("design", "select", selected="a", user_proposal=Proposal("c", "user", .5, "tradeoff"), user_proposal_evaluated=True))
     assert session.unanswered() == ("storage",)
+
+
+def test_journal_save_and_stale_resume_rejection(tmp_path):
+    from awtui.journal import resume, save
+    path = tmp_path / "session.json"
+    value = {"project_id": "demo", "ar_id": "AR-0006", "task_revision": 3, "packet_digest": "sha256:" + "b" * 64, "responses": {"design": {"selected": "a"}}, "unresolved": ["storage"], "future_requests": [{"text": "security", "ar_ref": "AR-0009"}]}
+    save(path, value)
+    assert resume(path, project_id="demo", ar_id="AR-0006", task_revision=3, packet_digest=value["packet_digest"])["unresolved"] == ["storage"]
+    try:
+        resume(path, project_id="demo", ar_id="AR-0006", task_revision=4, packet_digest=value["packet_digest"])
+    except ValueError as error:
+        assert "stale" in str(error)
+    else:
+        raise AssertionError("stale journal was accepted")

@@ -8,9 +8,9 @@ from tools.run_scenarios import _artifacts, _current_artifacts, generate, screen
 def test_scenario_runner_replays_every_input_and_writes_screenshots(tmp_path):
     root = Path(__file__).parents[1]
     result = generate(root)
-    assert result["scenario_count"] == 15
+    assert result["scenario_count"] == 20
     assert all((root / item["screenshot"]).is_file() for item in result["results"])
-    assert json.loads((root / "artifacts/scenario-results.json").read_text())["scenario_count"] == 15
+    assert json.loads((root / "artifacts/scenario-results.json").read_text())["scenario_count"] == 20
 
 
 def test_screenshot_has_accessible_deterministic_metadata():

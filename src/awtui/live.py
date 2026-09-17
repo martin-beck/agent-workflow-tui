@@ -45,13 +45,25 @@ class LiveInteraction:
         user = self.proposal if self.proposal.label.startswith("User: ") else None
         response = DecisionResponse(self.point.point_id, disposition, self.proposal.label if disposition == "select" else None, user, user is not None)
         self.responses[self.point.point_id] = response
+        self._refresh_callback()
         return response
     def render_points(self) -> str:
         lines = []
         for i, point in enumerate(self.packet.points):
-            lines.append(f"{'▶' if i == self.point_index else ' '} {point.point_id} [{'answered' if point.point_id in self.responses else 'unresolved'}]  {point.anchor}")
+            response = self.responses.get(point.point_id)
+            user_proposal = next((proposal for proposal in point.proposals if proposal.label.startswith("User: ")), None)
+            status = "✅ answered" if response else ("✎ proposal" if user_proposal else "unresolved")
+            lines.append(f"{'▶' if i == self.point_index else ' '} {point.point_id} [{status}]  {point.anchor}")
         lines += ["", f"Decision: {self.point.question}"]
-        lines += [f"  {'▶' if i == self.proposal_index else ' '} {p.label}" for i, p in enumerate(self.point.proposals)]
+        response = self.responses.get(self.point.point_id)
+        user_proposal = next((proposal for proposal in self.point.proposals if proposal.label.startswith("User: ")), None)
+        if response and response.selected:
+            visible = [(self.proposal_index, self.proposal)] if self.proposal.label == response.selected else [(index, proposal) for index, proposal in enumerate(self.point.proposals) if proposal.label == response.selected]
+        elif user_proposal:
+            visible = [(index, user_proposal) for index, proposal in enumerate(self.point.proposals) if proposal is user_proposal]
+        else:
+            visible = list(enumerate(self.point.proposals))
+        lines += [f"  {'▶' if i == self.proposal_index else ' '} {p.label}" for i, p in visible]
         return "\n".join(lines)
     def render_helper(self) -> str:
         p = self.proposal

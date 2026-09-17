@@ -5,7 +5,7 @@ from dataclasses import replace
 from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
-from prompt_toolkit.layout import HSplit, Layout, VSplit
+from prompt_toolkit.layout import Dimension, HSplit, Layout, VSplit
 from prompt_toolkit.widgets import Frame, TextArea
 from .discussion import DiscussionPacket, DecisionResponse, PacketPoint, Proposal
 from .markdown import render_markdown
@@ -272,14 +272,50 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             event.app.current_buffer.insert_text("a")
             return
         interaction.input_mode = True; editor.visible = True; event.app.layout.focus(editor); refresh()
-    body = HSplit([VSplit([Frame(document_view, title="Design / Workplan"), Frame(points_view, title="Decisions and proposals")]), Frame(helper_view, title="Helper: rationale, implications, evidence"), editor, footer])
+    # Keep the pane geometry independent of the amount of text in a document,
+    # proposal, or helper message.  The weighted dimensions are deliberately
+    # attached to the containers (rather than inferred from TextArea content):
+    # each pane keeps its allocation while the terminal is resized, and
+    # prompt-toolkit reflows the complete layout on SIGWINCH.  Minimums make
+    # narrow terminals degrade as a whole instead of allowing one pane to
+    # consume all available space.
+    pane_width = Dimension(min=28, max=120, weight=1)
+    document_row_height = Dimension(min=8, max=40, weight=3)
+    helper_height = Dimension(min=6, max=12, preferred=9, weight=1)
+    document_row = VSplit(
+        [
+            Frame(document_view, title="Design / Workplan", width=pane_width),
+            Frame(points_view, title="Decisions and proposals", width=pane_width),
+        ],
+        padding=1,
+        width=Dimension(weight=1),
+        height=document_row_height,
+    )
+    helper_frame = Frame(
+        helper_view,
+        title="Helper: rationale, implications, evidence",
+        width=Dimension(weight=1),
+        height=helper_height,
+    )
+    body = HSplit(
+        [document_row, helper_frame, editor, footer],
+        width=Dimension(weight=1),
+        height=Dimension(weight=1),
+    )
     application = Application(
         layout=Layout(body), key_bindings=bindings, full_screen=True,
         erase_when_done=True,
     )
     interaction._refresh = refresh
     refresh()
-    application.awtui_panes = (document_view, points_view, helper_view); application.awtui_footer = footer; application.editor = editor; application.interaction = interaction; application.awtui_state = interaction
+    application.awtui_panes = (document_view, points_view, helper_view)
+    application.awtui_footer = footer
+    application.awtui_layout_dimensions = {
+        "document_row": document_row_height,
+        "pane_width": pane_width,
+        "helper": helper_height,
+    }
+    application.editor = editor; application.interaction = interaction; application.awtui_state = interaction
     return application
 
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import replace
 from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import HSplit, Layout, VSplit
 from prompt_toolkit.widgets import Frame, TextArea
 from .discussion import DiscussionPacket, DecisionResponse, PacketPoint, Proposal
@@ -54,10 +55,11 @@ class LiveInteraction:
         return "\n".join(lines)
     def render_helper(self) -> str:
         p = self.proposal
-        return f"Proposal {self.proposal_index + 1}/{len(self.point.proposals)}: {p.label}\n\nRationale: {p.rationale}\nConfidence: {p.confidence:.2f}\nTrade-offs: {p.tradeoffs}\n\nAnchor: {self.point.anchor}\nImplications: {self.point.implications}\nEvidence gap: {self.point.evidence_gap or 'none recorded'}\nHuman intent is separate from implementation and quality evidence."
+        return f"Proposal {self.proposal_index + 1}/{len(self.point.proposals)}: {p.label}\n\nRationale: {p.rationale}\nConfidence: {p.confidence:.2f}\nTrade-offs: {p.tradeoffs}\n\nAnchor: {self.point.anchor}\nHighlight: {self.point.highlight or self.point.question}\nImplications: {self.point.implications}\nEvidence gap: {self.point.evidence_gap or 'none recorded'}\nHuman intent is separate from implementation and quality evidence."
 
     def switch_document(self):
         self.document_mode = "workplan" if self.document_mode != "workplan" else "design"
+        self._manual_document_switch = True
         self._refresh_callback()
 
     # Compatibility names used by scenario drivers and a convenient public UI API.
@@ -124,14 +126,47 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     helper_view = TextArea(text=interaction.render_helper() if packet else helper, read_only=True, scrollbar=True)
     editor = TextArea(text="", multiline=True, scrollbar=True, height=3, prompt="New proposal (label | rationale | confidence | trade-offs): ")
     editor.visible = False
-    footer = TextArea(text="↑/↓: decision  ←/→: proposal  tab/w/d: workplan/design  enter: select  r: reject  c: clarify  m: evidence  a: add proposal  s: save  o: reopen  q: quit", read_only=True, height=1)
+    footer = TextArea(text="↑/↓: decision  ←/→: proposal  tab/w/d: workplan/design  page-up/page-down: scroll document  enter: select  r: reject  c: clarify  m: evidence  a: add proposal  s: save  o: reopen  q: quit", read_only=True, height=1)
     bindings = KeyBindings()
     def refresh():
         points_view.text = interaction.render_points() if packet else points
         helper_view.text = ("Enter: label | rationale | confidence (0..1) | trade-offs" if interaction.input_mode else (interaction.render_helper() if packet else helper))
         document = workplan if interaction.document_mode == "workplan" else design_document
         rendered = render_markdown(document)
-        document_view.text = f"▶ ACTIVE DECISION ANCHOR: {interaction.point.anchor}\n\n{rendered}" if packet else rendered
+        if packet:
+            point = interaction.point
+            phrase = point.highlight or point.question or point.anchor
+            # If the selected phrase is only present in the other authoritative
+            # document, follow its anchor.  This keeps normal manual w/d
+            # inspection possible when both documents contain the phrase.
+            follow_anchor = not getattr(interaction, "_manual_document_switch", False)
+            interaction._manual_document_switch = False
+            if follow_anchor and phrase.casefold() not in rendered.casefold():
+                target = point.anchor.split(":", 1)[0].lower()
+                if target == "workplan" and interaction.document_mode != "workplan":
+                    interaction.document_mode = "workplan"
+                    rendered = render_markdown(workplan)
+                elif target == "design" and interaction.document_mode != "design":
+                    interaction.document_mode = "design"
+                    rendered = render_markdown(design_document)
+            # Keep the active context visible above the rendered Markdown and
+            # locate the phrase in the rendered buffer so prompt-toolkit
+            # scrolls the read-only pane to the selected decision.
+            prefix = f"▶ ACTIVE DECISION ANCHOR: {point.anchor}\n▶ HIGHLIGHT TARGET\n\n"
+            document_view.text = prefix + rendered
+            # Search the rendered Markdown body, not the explanatory marker,
+            # so the viewport lands on the actual source text.
+            body_start = len(prefix)
+            position = document_view.text.casefold().find(phrase.casefold(), body_start)
+            if position < 0:
+                # A live AR may refer to text not present in a stale document;
+                # retain an explicit, visible marker rather than failing.
+                document_view.text += f"\n\n▶ HIGHLIGHT NOT FOUND IN DOCUMENT: {phrase}"
+                position = document_view.text.casefold().find(phrase.casefold())
+            document_view.buffer.cursor_position = max(0, position)
+        else:
+            document_view.text = rendered
+            document_view.buffer.cursor_position = 0
     def emit(event, event_type):
         if packet and event_type in {"select", "reject", "clarify"}: interaction.respond(event_type)
         refresh()
@@ -150,12 +185,22 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     def left(event): interaction.move_proposal(-1); refresh()
     @bindings.add("right")
     def right(event): interaction.move_proposal(1); refresh()
+    def page_document(event, delta):
+        """Scroll the document pane while preserving active decision state."""
+        buffer = document_view.buffer
+        step = max(1, len(document_view.text) // 3)
+        buffer.cursor_position = max(0, min(len(document_view.text), buffer.cursor_position + delta * step))
+        event.app.layout.focus(document_view)
+    @bindings.add(Keys.PageUp)
+    def page_up(event): page_document(event, -1)
+    @bindings.add(Keys.PageDown)
+    def page_down(event): page_document(event, 1)
     @bindings.add("tab")
-    def toggle_document(event): interaction.switch_document(); refresh()
+    def toggle_document(event): interaction.switch_document()
     @bindings.add("w")
-    def workplan_key(event): interaction.document_mode = "workplan"; refresh()
+    def workplan_key(event): interaction.document_mode = "workplan"; interaction._manual_document_switch = True; refresh()
     @bindings.add("d")
-    def design_key(event): interaction.document_mode = "design"; refresh()
+    def design_key(event): interaction.document_mode = "design"; interaction._manual_document_switch = True; refresh()
     @bindings.add("enter")
     def enter(event):
         if interaction.input_mode:

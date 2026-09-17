@@ -6,6 +6,11 @@ snapshot, and lifecycle status). AWG supplies the decision packet, ranked
 alternatives, formal-check result, and reconciliation rules. AWQ supplies the
 applicable quality/evidence contract.
 
+When document content is supplied, `ar_context.documents.design` and
+`ar_context.documents.workplan` are Markdown strings. The TUI always routes
+both through its pinned terminal Markdown renderer before display, for live
+project sessions as well as scenario demos.
+
 The TUI may render and collect discussion, clarification, selection, added
 proposal, rejection, conflict/reopen disposition, and safe-exit actions. Each
 outbound event repeats the context identity and a monotonic session sequence.
@@ -24,4 +29,3 @@ AR context -> packet review -> formal review -> TUI discussion
 
 Safe exit persists the complete packet, answered and unresolved points, and a
 bounded future-request-to-AR mapping. It never marks the AR complete by itself.
-

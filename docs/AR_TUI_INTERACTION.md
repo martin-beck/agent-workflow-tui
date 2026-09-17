@@ -29,3 +29,12 @@ AR context -> packet review -> formal review -> TUI discussion
 
 Safe exit persists the complete packet, answered and unresolved points, and a
 bounded future-request-to-AR mapping. It never marks the AR complete by itself.
+
+For a live Coordinator-backed session, callers use
+`build_application_from_context(context, decisions=..., record_event=...)`.
+The TUI wraps every accepted action in the context identity and monotonic
+sequence supplied by `LiveSessionTransport`; the callback receives that
+revision-bound envelope. A rejected delivery is shown in the helper pane and
+does not commit the local decision response. The legacy `on_event` callback
+remains available for local demos and scenario replay, where event names are
+intentionally sufficient.

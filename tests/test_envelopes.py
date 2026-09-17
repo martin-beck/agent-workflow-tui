@@ -62,6 +62,30 @@ def test_coordinator_adapter_records_only_accepted_events():
     assert len(recorded) == 1
 
 
+def test_coordinator_recorder_failure_does_not_advance_boundary():
+    attempts = []
+
+    def recorder(event):
+        attempts.append(event)
+        if len(attempts) == 1:
+            raise RuntimeError("persistence unavailable")
+
+    from awtui.coordinator import CoordinatorAdapter
+
+    adapter = CoordinatorAdapter(context(), recorder)
+    first = event()
+    try:
+        adapter.submit(first)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("recorder failure should be visible to caller")
+    assert adapter.boundary.next_sequence == 1
+    adapter.submit(first)
+    assert [item["sequence"] for item in attempts] == [1, 1]
+    assert adapter.boundary.next_sequence == 2
+
+
 def test_awq_evidence_is_revision_bound_and_separate_from_intent():
     from awtui.awq import check_evidence
     evidence = {"ar_id": "AR-0010", "task_revision": 2, "kind": "formal", "status": "pass", "digest": "sha256:" + "d" * 64}

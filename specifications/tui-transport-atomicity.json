@@ -1,0 +1,17 @@
+{
+  "schema_version": "0.1",
+  "spec_id": "AWT-SPEC-TUI-TRANSPORT-ATOMICITY",
+  "version": 1,
+  "objective": "Rejected transport and persistence attempts do not mutate the revision-bound session sequence.",
+  "invariants": [
+    "Boundary validation occurs before delivery or persistence.",
+    "A rejected delivery leaves the next sequence unchanged.",
+    "A persistence exception leaves the next sequence unchanged.",
+    "A successful delivery or persistence advances the sequence exactly once."
+  ],
+  "formalization": {
+    "method": "executable invariant checks",
+    "checker": "tools/check_transport_atomicity.py",
+    "tests": "tests/test_live_transport.py and tests/test_envelopes.py"
+  }
+}

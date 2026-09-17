@@ -1,4 +1,4 @@
-from awtui.bridge import apply_tui_response, interaction_state
+from awtui.bridge import apply_tui_response, interaction_state, tui_to_coordinator_response
 
 
 def test_interaction_state_is_explicit_and_pending():
@@ -22,3 +22,11 @@ def test_invalid_event_rejected():
     except ValueError:
         return
     raise AssertionError("invalid event accepted")
+
+
+def test_tui_response_is_coordinator_persistence_command():
+    request = {"kind": "coordinator-tui-request", "project_id": "p", "session_id": "s", "ar": {"ar_id": "AR-0001", "task_revision": 3}, "interaction": {"decision_request_ref": "AWG-DECIDE-1"}}
+    event = {"session_id": "s", "sequence": 1, "event_type": "select", "payload": {"point_id": "p1", "disposition": "selected", "selected_candidate": "C-A"}}
+    result = tui_to_coordinator_response(request, event, description_append="Selected C-A")
+    assert result["ar_update"]["decision_status"] == "resolved"
+    assert result["ar_update"]["specification_update"]["selected_candidate"] == "C-A"

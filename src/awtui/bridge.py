@@ -39,3 +39,24 @@ def apply_tui_response(ar: dict[str, Any], event: dict[str, Any], *, response_ev
     if "specification" in payload:
         updated["specification"] = payload["specification"]
     return updated
+
+
+def tui_to_coordinator_response(request: dict[str, Any], event: dict[str, Any], *, description_append: str = "", ar_status: str = "open") -> dict[str, Any]:
+    """Wrap a revision-bound TUI event as the Coordinator persistence command."""
+    if request.get("kind") != "coordinator-tui-request":
+        raise ValueError("not a Coordinator/TUI request")
+    if event.get("session_id") != request.get("session_id"):
+        raise ValueError("response session does not match request")
+    payload = event.get("payload") or {}
+    disposition = payload.get("disposition", event.get("event_type"))
+    resolved = disposition in {"select", "selected", "rejected", "reject", "reconciled"}
+    return {
+        "schema_version": BRIDGE_VERSION,
+        "kind": "coordinator-tui-response",
+        "project_id": request["project_id"],
+        "ar_id": request["ar"]["ar_id"],
+        "task_revision": request["ar"]["task_revision"],
+        "decision_request_ref": request["interaction"]["decision_request_ref"],
+        "event": {"session_id": event["session_id"], "sequence": event["sequence"], "event_type": event["event_type"], "payload": payload},
+        "ar_update": {"decision_status": "resolved" if resolved else "pending", "ar_status": ar_status, "description_append": description_append, "specification_update": {"request_id": request["interaction"]["decision_request_ref"], "point_id": payload.get("point_id", request["interaction"]["decision_request_ref"]), "disposition": disposition, "selected_candidate": payload.get("selected_candidate"), "selected": payload.get("selected"), "user_proposal": payload.get("user_proposal")}},
+    }

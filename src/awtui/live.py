@@ -197,7 +197,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             interaction.input_mode = False; editor.visible = False; editor.text = ""; event.app.layout.focus(points_view); refresh()
         elif interaction.input_mode:
             event.app.current_buffer.insert_text(event.key_sequence[0].key)
-        elif not event.app.is_done():
+        elif not event.app.is_done:
             event.app.exit(result=0)
     @bindings.add("up")
     def up(event): interaction.move_point(-1); refresh()

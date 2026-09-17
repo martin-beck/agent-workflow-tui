@@ -2,12 +2,15 @@
 """Validate the deterministic synthetic TUI scenario corpus."""
 from __future__ import annotations
 import json
+import re
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
-from awtui.live import RECORDED_CONTROLS
+from awtui.live import RECORDED_CONTROLS, dispatch_recorded_input
 
 ALLOWED = {"enter", "r", "c", "m", "a", "s", "o", "q", "escape"}
+HEX_DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
+SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 def validate(path: Path) -> list[str]:
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -31,6 +34,18 @@ def validate(path: Path) -> list[str]:
         for key in ("project_id", "ar_id", "task_revision", "packet_digest", "session_id"):
             if key not in context:
                 errors.append(f"{item.get('id')} missing context {key}")
+        for key in ("project_id", "ar_id", "session_id"):
+            if key in context and (not isinstance(context[key], str) or not SAFE_ID.fullmatch(context[key])):
+                errors.append(f"{item.get('id')} invalid context {key}")
+        if not isinstance(context.get("task_revision"), int) or context.get("task_revision", 0) < 1:
+            errors.append(f"{item.get('id')} task_revision must be a positive integer")
+        if not isinstance(context.get("packet_digest"), str) or not HEX_DIGEST.fullmatch(context["packet_digest"]):
+            errors.append(f"{item.get('id')} packet_digest must be sha256 plus 64 lowercase hex digits")
+        if len(item.get("actions", [])) > 32:
+            errors.append(f"{item.get('id')} action trace is unbounded")
+        replayed = dispatch_recorded_input("".join("\n" if a == "enter" else "\x1b" if a == "escape" else a for a in item.get("actions", [])), lambda _event: None)
+        if replayed != item.get("expected_events", []):
+            errors.append(f"{item.get('id')} expected_events do not match live control replay")
     return errors
 
 if __name__ == "__main__":

@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+from awtui.live import main
+
+raise SystemExit(main())
+

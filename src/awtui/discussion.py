@@ -21,6 +21,9 @@ class PacketPoint:
     implications: str
     evidence_gap: str = ""
     unresolved: bool = True
+    # Text to bring into view when this decision is active.  It is optional
+    # so packets produced by older Agent Workflow integrations remain valid.
+    highlight: str = ""
 
     def __post_init__(self):
         if not self.point_id or not self.anchor or len(self.proposals) < 2:

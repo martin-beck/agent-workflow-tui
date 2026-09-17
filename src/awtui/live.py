@@ -75,7 +75,7 @@ class LiveInteraction:
 def _default_packet(document: str, points: str) -> DiscussionPacket:
     p = Proposal("Review in context", "Inspect the highlighted material", .7, "Requires human review")
     q = Proposal("Request evidence", "Ask for evidence before deciding", .8, "Delays the decision")
-    return DiscussionPacket("interactive", 1, (PacketPoint("point-1", "document:1", points, (p, q), "Review downstream effects", "Evidence is synthetic"),), document=document)
+    return DiscussionPacket("interactive", 1, (PacketPoint("point-1", "document:1", points, (p, q), "Review downstream effects", "Evidence is synthetic", highlight=points),), document=document)
 
 def _packet_from_decisions(decisions, design_document: str, workplan: str) -> DiscussionPacket:
     points = []
@@ -83,7 +83,7 @@ def _packet_from_decisions(decisions, design_document: str, workplan: str) -> Di
         proposals = tuple(Proposal(p.get("label", "Proposal"), p.get("rationale", "No rationale recorded"), float(p.get("confidence", .5)), p.get("tradeoffs", "No trade-offs recorded")) for p in raw.get("proposals", []))
         while len(proposals) < 2:
             proposals += (Proposal("Request evidence", "Gather missing evidence", .5, "Delays decision"),)
-        points.append(PacketPoint(raw["point_id"], raw.get("anchor", "document:1"), raw.get("question", "What should happen?"), proposals, raw.get("helper", raw.get("implications", "Review downstream implications")), raw.get("evidence_gap", "")))
+        points.append(PacketPoint(raw["point_id"], raw.get("anchor", "document:1"), raw.get("question", "What should happen?"), proposals, raw.get("helper", raw.get("implications", "Review downstream implications")), raw.get("evidence_gap", ""), highlight=raw.get("highlight", raw.get("question", ""))))
     return DiscussionPacket("interactive", 1, tuple(points), "design")
 
 
@@ -92,6 +92,7 @@ def _standalone_demo_decisions() -> list[dict]:
         "point_id": f"standalone-{index}",
         "anchor": anchor,
         "question": question,
+        "highlight": {"design:L4": "Design boundary", "workplan:L8": "Rollout step", "design:L16": "Validation path"}[anchor],
         "proposals": [
             {"label": "Conservative", "rationale": "Minimize change", "confidence": .8, "tradeoffs": "slower delivery"},
             {"label": "Expedite", "rationale": "Shorten feedback loop", "confidence": .6, "tradeoffs": "higher review load"},

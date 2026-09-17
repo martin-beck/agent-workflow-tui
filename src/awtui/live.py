@@ -9,6 +9,7 @@ from prompt_toolkit.layout import HSplit, Layout, VSplit
 from prompt_toolkit.widgets import Frame, TextArea
 from .discussion import DiscussionPacket, DecisionResponse, PacketPoint, Proposal
 from .markdown import render_markdown
+from .transport import LiveSessionTransport, EventAcknowledgement
 
 RECORDED_CONTROLS = {"\n": "select", "\r": "select", "r": "reject", "c": "clarify", "m": "request-more-evidence", "a": "add-proposal", "s": "safe-exit", "o": "reopen"}
 
@@ -136,7 +137,7 @@ def run_application(application, *, output_fn=print) -> int:
         return 1
 
 
-def build_application(*, document: str = "Awaiting AR context", points: str = "No discussion points", helper: str = "Select a point for implications and evidence", on_event=None, packet: DiscussionPacket | None = None, workplan: str = "Awaiting workplan", design_document: str | None = None, decisions=None) -> Application:
+def build_application(*, document: str = "Awaiting AR context", points: str = "No discussion points", helper: str = "Select a point for implications and evidence", on_event=None, packet: DiscussionPacket | None = None, workplan: str = "Awaiting workplan", design_document: str | None = None, decisions=None, transport: LiveSessionTransport | None = None) -> Application:
     design_document = design_document if design_document is not None else document
     packet = packet or (_packet_from_decisions(decisions, design_document, workplan) if decisions else None)
     interaction = LiveInteraction(packet or _default_packet(design_document, points))
@@ -187,9 +188,31 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             document_view.text = rendered
             document_view.buffer.cursor_position = 0
     def emit(event, event_type):
-        if packet and event_type in {"select", "reject", "clarify"}: interaction.respond(event_type)
+        response = None
+        previous_response = interaction.responses.get(interaction.point.point_id) if packet else None
+        if packet and event_type in {"select", "reject", "clarify"}:
+            response = interaction.respond(event_type)
+        acknowledgement: EventAcknowledgement | None = None
+        if transport is not None:
+            payload = {"point_id": interaction.point.point_id}
+            if response is not None:
+                payload.update({"disposition": response.disposition, "selected": response.selected})
+                if response.user_proposal is not None:
+                    payload["user_proposal"] = {"label": response.user_proposal.label, "evaluated": response.user_proposal_evaluated}
+            acknowledgement = transport.submit(event_type, **payload)
+            if not acknowledgement.accepted:
+                if packet and event_type in {"select", "reject", "clarify"}:
+                    if previous_response is None:
+                        interaction.responses.pop(interaction.point.point_id, None)
+                    else:
+                        interaction.responses[interaction.point.point_id] = previous_response
+                refresh()
+                helper_view.text = f"Event not accepted: {acknowledgement.reason}"
+                return
         refresh()
         if on_event is not None: on_event(event_type)
+        if transport is not None:
+            application.awtui_last_acknowledgement = acknowledgement
     @bindings.add("q")
     @bindings.add("escape")
     def quit_app(event):
@@ -260,14 +283,16 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     return application
 
 
-def build_application_from_context(context: dict, *, decisions=None, on_event=None) -> Application:
+def build_application_from_context(context: dict, *, decisions=None, on_event=None, record_event=None) -> Application:
     """Build the live UI from a Coordinator/AWG context, always rendering Markdown documents."""
     documents = context.get("documents", {})
+    transport = LiveSessionTransport(context, record_event) if record_event is not None else None
     return build_application(
         design_document=documents.get("design", "# Design document\n\nNo design document supplied."),
         workplan=documents.get("workplan", "# Workplan\n\nNo workplan supplied."),
         decisions=decisions,
         on_event=on_event,
+        transport=transport,
     )
 
 

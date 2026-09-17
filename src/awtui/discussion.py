@@ -43,3 +43,33 @@ class DiscussionPacket:
     def active(self, index: int = 0) -> PacketPoint:
         return self.points[max(0, min(index, len(self.points) - 1))]
 
+
+@dataclass(frozen=True)
+class DecisionResponse:
+    point_id: str
+    disposition: str
+    selected: str | None = None
+    user_proposal: Proposal | None = None
+    user_proposal_evaluated: bool = False
+
+    def __post_init__(self):
+        if self.disposition not in {"select", "reject", "clarify"}:
+            raise ValueError("invalid decision disposition")
+        if self.user_proposal is not None and not self.user_proposal_evaluated:
+            raise ValueError("user proposal must be evaluated before selection")
+
+
+class DecisionSession:
+    def __init__(self, packet: DiscussionPacket):
+        self.packet = packet
+        self.responses: dict[str, DecisionResponse] = {}
+
+    def respond(self, response: DecisionResponse) -> None:
+        if response.point_id not in {point.point_id for point in self.packet.points}:
+            raise ValueError("response point is not in packet")
+        if response.disposition == "select" and not response.selected:
+            raise ValueError("selection requires a proposal")
+        self.responses[response.point_id] = response
+
+    def unanswered(self) -> tuple[str, ...]:
+        return tuple(point.point_id for point in self.packet.points if point.point_id not in self.responses)

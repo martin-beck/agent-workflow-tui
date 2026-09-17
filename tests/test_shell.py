@@ -35,3 +35,11 @@ def test_shell_quits_and_draws():
 def test_shell_is_bounded():
     screen = Screen()
     assert run_screen(screen, input_fn=lambda: ord("x"), max_steps=2) == 2
+
+
+def test_packet_preserves_ranked_proposals_and_identity():
+    from awtui.discussion import DiscussionPacket, PacketPoint, Proposal
+    point = PacketPoint("design", "design:42", "Which path?", (Proposal("a", "small", .8, "less scope"), Proposal("b", "safe", .6, "more work")), "downstream impact", "needs runtime evidence")
+    packet = DiscussionPacket("AR-0004", 2, (point,))
+    assert packet.active().point_id == "design"
+    assert packet.active().evidence_gap == "needs runtime evidence"

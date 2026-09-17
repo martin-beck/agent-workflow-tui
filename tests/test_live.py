@@ -13,7 +13,7 @@ def test_live_controls_emit_explicit_event_types():
     app = build_application(on_event=events.append)
     class Event:
         app = None
-    for key, expected in (("enter", "select"), ("r", "reject"), ("c", "clarify"), ("a", "add-proposal"), ("s", "safe-exit"), ("o", "reopen")):
+    for key, expected in (("enter", "select"), ("r", "reject"), ("c", "clarify"), ("m", "request-more-evidence"), ("a", "add-proposal"), ("s", "safe-exit"), ("o", "reopen")):
         binding = next(binding for binding in app.key_bindings.bindings if (str(binding.keys[0]) == key or (key == "enter" and str(binding.keys[0]) == "Keys.ControlM")))
         binding.handler(Event())
         assert events[-1] == expected

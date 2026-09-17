@@ -23,3 +23,10 @@ class Reconciliation:
     def event_type(self) -> str:
         return "reopen" if self.disposition in {"reopen", "discussion-required"} else "reconciled"
 
+
+def render_conflict(value: Reconciliation) -> str:
+    """Render a concise, actionable conflict summary for the live helper pane."""
+    lines = [f"Reconciliation {value.ar_id} revision {value.task_revision}", f"action: {value.event_type()}"]
+    lines.append("affected ARs: " + ", ".join(value.affected_ars))
+    lines.append("contradictions: " + ("; ".join(value.contradictions) if value.contradictions else "none"))
+    return "\n".join(lines)

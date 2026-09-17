@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+from awtui.scenario_helper import main
+
+raise SystemExit(main())

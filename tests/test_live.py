@@ -1,4 +1,5 @@
 from awtui.live import build_application
+from pathlib import Path
 
 
 def test_prompt_toolkit_application_has_two_panes_and_quit_binding():
@@ -43,7 +44,8 @@ def test_live_navigation_switches_documents_and_tracks_decision_anchor():
     assert "Proposal 2/2: direct" in app.awtui_panes[2].text
     state.switch_document()
     assert state.document_mode == "workplan"
-    assert app.awtui_panes[0].text == "WORKPLAN: ship parser"
+    assert app.awtui_panes[0].text.startswith("WORKPLAN: ship parser")
+    assert "ACTIVE DECISION ANCHOR: plan:L4" in app.awtui_panes[0].text
 
 
 def test_live_footer_advertises_document_and_focus_controls():
@@ -57,6 +59,19 @@ def test_live_footer_advertises_document_and_focus_controls():
 def test_live_application_erases_final_frame_on_terminal_exit():
     app = build_application()
     assert app.erase_when_done is True
+
+
+def test_standalone_live_launcher_bootstraps_src_import_path():
+    launcher = (Path(__file__).parents[1] / "tools/awtui-live").read_text(encoding="utf-8")
+    assert "Path(__file__).resolve().parents[1]" in launcher
+    assert "sys.path.insert" in launcher
+
+
+def test_standalone_demo_has_multiple_decisions_and_active_anchor():
+    from awtui.live import _standalone_demo_decisions
+    app = build_application(workplan="WORKPLAN", design_document="DESIGN", decisions=_standalone_demo_decisions())
+    assert len(app.awtui_state.packet.points) == 3
+    assert "ACTIVE DECISION ANCHOR: design:L4" in app.awtui_panes[0].text
 
 
 def test_run_application_reports_only_safe_status_after_interrupt():

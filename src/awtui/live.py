@@ -86,6 +86,20 @@ def _packet_from_decisions(decisions, design_document: str, workplan: str) -> Di
     return DiscussionPacket("interactive", 1, tuple(points), "design")
 
 
+def _standalone_demo_decisions() -> list[dict]:
+    return [{
+        "point_id": f"standalone-{index}",
+        "anchor": anchor,
+        "question": question,
+        "proposals": [
+            {"label": "Conservative", "rationale": "Minimize change", "confidence": .8, "tradeoffs": "slower delivery"},
+            {"label": "Expedite", "rationale": "Shorten feedback loop", "confidence": .6, "tradeoffs": "higher review load"},
+        ],
+        "helper": "Review the highlighted document anchor and downstream implications.",
+        "evidence_gap": "Standalone demo evidence is synthetic.",
+    } for index, (anchor, question) in enumerate((("design:L4", "Which design boundary?"), ("workplan:L8", "Which rollout step?"), ("design:L16", "Which validation path?")), 1)]
+
+
 def run_application(application, *, output_fn=print) -> int:
     """Run a live app while restoring the terminal and redacting failures."""
     try:
@@ -113,7 +127,8 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     def refresh():
         points_view.text = interaction.render_points() if packet else points
         helper_view.text = ("Enter: label | rationale | confidence (0..1) | trade-offs" if interaction.input_mode else (interaction.render_helper() if packet else helper))
-        document_view.text = workplan if interaction.document_mode == "workplan" else design_document
+        document = workplan if interaction.document_mode == "workplan" else design_document
+        document_view.text = f"{document}\n\n▶ ACTIVE DECISION ANCHOR: {interaction.point.anchor}" if packet else document
     def emit(event, event_type):
         if packet and event_type in {"select", "reject", "clarify"}: interaction.respond(event_type)
         refresh()
@@ -163,6 +178,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         erase_when_done=True,
     )
     interaction._refresh = refresh
+    refresh()
     application.awtui_panes = (document_view, points_view, helper_view); application.awtui_footer = footer; application.editor = editor; application.interaction = interaction; application.awtui_state = interaction
     return application
 
@@ -190,4 +206,8 @@ def run_application(application: Application, *, output_fn=print) -> int:
 
 
 def main() -> int:
-    return run_application(build_application())
+    return run_application(build_application(
+        design_document="DESIGN DOCUMENT\nDefine the service boundary and validation strategy.",
+        workplan="WORKPLAN\n1. Agree boundary\n2. Stage rollout\n3. Validate outcomes",
+        decisions=_standalone_demo_decisions(),
+    ))

@@ -66,3 +66,15 @@ def test_journal_save_and_stale_resume_rejection(tmp_path):
         assert "stale" in str(error)
     else:
         raise AssertionError("stale journal was accepted")
+
+
+def test_contradiction_requires_targeted_reopen():
+    from awtui.reconciliation import Reconciliation
+    reopened = Reconciliation("AR-0007", 4, ("AR-0008",), ("revision conflict",), "discussion-required")
+    assert reopened.event_type() == "reopen"
+    try:
+        Reconciliation("AR-0007", 4, ("AR-0008",), ("revision conflict",), "reconciled")
+    except ValueError as error:
+        assert "contradictions" in str(error)
+    else:
+        raise AssertionError("contradictory reconciliation was accepted")

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martin-beck/agent-workflow-tui/schemas/coordinator-tui-bridge.schema.json",
+  "title": "Coordinator/TUI interaction bridge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "interaction_required", "decision_status", "decision_request_ref"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "interaction_required": {"type": "boolean"},
+    "decision_status": {"enum": ["pending", "in_progress", "resolved", "superseded"]},
+    "decision_request_ref": {"type": "string", "pattern": "^AWG-[A-Z0-9-]+$"},
+    "decision_class": {"type": "string"},
+    "oracle_deadline": {"type": "string", "format": "date-time"},
+    "last_response_event": {"type": "string", "minLength": 1}
+  }
+}

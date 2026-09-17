@@ -7,6 +7,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import HSplit, Layout, VSplit
 from prompt_toolkit.widgets import Frame, TextArea
 from .discussion import DiscussionPacket, DecisionResponse, PacketPoint, Proposal
+from .markdown import render_markdown
 
 RECORDED_CONTROLS = {"\n": "select", "\r": "select", "r": "reject", "c": "clarify", "m": "request-more-evidence", "a": "add-proposal", "s": "safe-exit", "o": "reopen"}
 
@@ -117,7 +118,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     design_document = design_document if design_document is not None else document
     packet = packet or (_packet_from_decisions(decisions, design_document, workplan) if decisions else None)
     interaction = LiveInteraction(packet or _default_packet(design_document, points))
-    document_view = TextArea(text=design_document, read_only=True, scrollbar=True)
+    document_view = TextArea(text=render_markdown(design_document), read_only=True, scrollbar=True)
     points_view = TextArea(text=interaction.render_points() if packet else points, read_only=True, scrollbar=True)
     helper_view = TextArea(text=interaction.render_helper() if packet else helper, read_only=True, scrollbar=True)
     editor = TextArea(text="", multiline=True, scrollbar=True, height=3, prompt="New proposal (label | rationale | confidence | trade-offs): ")
@@ -128,7 +129,8 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         points_view.text = interaction.render_points() if packet else points
         helper_view.text = ("Enter: label | rationale | confidence (0..1) | trade-offs" if interaction.input_mode else (interaction.render_helper() if packet else helper))
         document = workplan if interaction.document_mode == "workplan" else design_document
-        document_view.text = f"{document}\n\n▶ ACTIVE DECISION ANCHOR: {interaction.point.anchor}" if packet else document
+        rendered = render_markdown(document)
+        document_view.text = f"{rendered}\n\n▶ ACTIVE DECISION ANCHOR: {interaction.point.anchor}" if packet else rendered
     def emit(event, event_type):
         if packet and event_type in {"select", "reject", "clarify"}: interaction.respond(event_type)
         refresh()
@@ -183,6 +185,17 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     return application
 
 
+def build_application_from_context(context: dict, *, decisions=None, on_event=None) -> Application:
+    """Build the live UI from a Coordinator/AWG context, always rendering Markdown documents."""
+    documents = context.get("documents", {})
+    return build_application(
+        design_document=documents.get("design", "# Design document\n\nNo design document supplied."),
+        workplan=documents.get("workplan", "# Workplan\n\nNo workplan supplied."),
+        decisions=decisions,
+        on_event=on_event,
+    )
+
+
 def run_application(application: Application, *, output_fn=print) -> int:
     """Run the app and report a concise status after terminal cleanup.
 
@@ -207,7 +220,7 @@ def run_application(application: Application, *, output_fn=print) -> int:
 
 def main() -> int:
     return run_application(build_application(
-        design_document="DESIGN DOCUMENT\nDefine the service boundary and validation strategy.",
-        workplan="WORKPLAN\n1. Agree boundary\n2. Stage rollout\n3. Validate outcomes",
+        design_document="# Design document\n\nDefine the service boundary and validation strategy.",
+        workplan="# Workplan\n\n1. Agree boundary\n2. Stage rollout\n3. Validate outcomes",
         decisions=_standalone_demo_decisions(),
     ))

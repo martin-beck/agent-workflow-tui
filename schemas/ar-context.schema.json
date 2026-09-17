@@ -10,6 +10,15 @@
     "packet_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "contract_versions": {"type": "object", "additionalProperties": {"type": "string"}, "minProperties": 1},
     "session_id": {"type": "string", "minLength": 1},
-    "predecessor_events": {"type": "array", "items": {"type": "string"}}
+    "predecessor_events": {"type": "array", "items": {"type": "string"}},
+    "documents": {
+      "type": "object",
+      "required": ["design", "workplan"],
+      "additionalProperties": false,
+      "properties": {
+        "design": {"type": "string", "minLength": 1},
+        "workplan": {"type": "string", "minLength": 1}
+      }
+    }
   }
 }

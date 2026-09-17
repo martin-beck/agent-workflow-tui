@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project_id", "ar_id", "task_revision", "packet_digest", "contract_versions", "session_id"],
+  "properties": {
+    "project_id": {"type": "string", "minLength": 1},
+    "ar_id": {"type": "string", "pattern": "^AR-[0-9]{4}$"},
+    "task_revision": {"type": "integer", "minimum": 1},
+    "packet_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "contract_versions": {"type": "object", "additionalProperties": {"type": "string"}, "minProperties": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "predecessor_events": {"type": "array", "items": {"type": "string"}}
+  }
+}

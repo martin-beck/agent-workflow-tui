@@ -11,7 +11,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     left = TextArea(text=document, read_only=True, scrollbar=True)
     right = TextArea(text=points, read_only=True, scrollbar=True)
     helper_view = TextArea(text=helper, read_only=True, scrollbar=True)
-    footer = TextArea(text="q: quit  enter: select  r: reject  c: clarify  a: add  s: save  o: reopen", read_only=True, height=1)
+    footer = TextArea(text="q: quit  enter: select  r: reject  c: clarify  m: more evidence  a: add  s: save  o: reopen", read_only=True, height=1)
     bindings = KeyBindings()
 
     @bindings.add("q")
@@ -23,7 +23,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         if on_event is not None:
             on_event(event_type)
 
-    for key, event_type in (("enter", "select"), ("r", "reject"), ("c", "clarify"), ("a", "add-proposal"), ("s", "safe-exit"), ("o", "reopen")):
+    for key, event_type in (("enter", "select"), ("r", "reject"), ("c", "clarify"), ("m", "request-more-evidence"), ("a", "add-proposal"), ("s", "safe-exit"), ("o", "reopen")):
         @bindings.add(key)
         def control(event, event_type=event_type) -> None:
             emit(event, event_type)

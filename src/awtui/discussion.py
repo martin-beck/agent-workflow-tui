@@ -61,6 +61,17 @@ def render_batch(packet: DiscussionPacket, responses: dict[str, "DecisionRespons
     return "\n".join(lines)
 
 
+def render_guardrails(*, authority: str, evidence_gap: str, limitations: str) -> str:
+    """Show contestability context so approval cannot be mistaken for proof."""
+    return "\n".join((
+        f"authority: {authority}",
+        f"evidence gap: {evidence_gap or 'none recorded'}",
+        "affordances: reject | clarify | request-more-evidence",
+        f"limitations: {limitations}",
+        "decision is human intent; implementation, quality, and independent review remain separate evidence",
+    ))
+
+
 @dataclass(frozen=True)
 class DecisionResponse:
     point_id: str

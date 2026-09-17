@@ -44,3 +44,19 @@ def test_session_boundary_advances_only_matching_sequence():
         assert "task_revision" in str(error)
     else:
         raise AssertionError("stale revision was accepted")
+
+
+def test_coordinator_adapter_records_only_accepted_events():
+    from awtui.coordinator import CoordinatorAdapter
+    recorded = []
+    adapter = CoordinatorAdapter(context(), recorded.append)
+    adapter.submit(event())
+    assert recorded == [event()]
+    bad = {**event(), "sequence": 1, "task_revision": 4}
+    try:
+        adapter.submit(bad)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("stale event reached Coordinator")
+    assert len(recorded) == 1

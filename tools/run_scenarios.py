@@ -11,6 +11,7 @@ ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 from awtui.live import dispatch_recorded_input
+from awtui.scenario_helper import demo_decisions
 from tools.validate_scenarios import validate
 
 _ACTION_KEYS = {
@@ -26,10 +27,30 @@ _ACTION_KEYS = {
 }
 _SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
+def _live_demo_state(scenario: dict, events: list[str]):
+    """Construct and exercise the same live multi-pane model used by the helper."""
+    from awtui.live import build_application
+    decisions = demo_decisions(scenario)
+    app = build_application(
+        design_document=f"DESIGN DOCUMENT\nScenario: {scenario['title']}\nAnchors: design:L10, design:L30",
+        workplan=f"WORKPLAN\nScenario: {scenario['title']}\nAnchor: workplan:L20",
+        decisions=decisions,
+    )
+    state = app.awtui_state
+    for event in events:
+        if event in {"select", "reject", "clarify"}:
+            state.respond(event)
+        elif event == "add-proposal":
+            from awtui.discussion import Proposal
+            state.add_proposal(Proposal("User: Demo proposal", "Synthetic rationale", .7, "Synthetic trade-off"))
+    return app, len(decisions)
+
+
 def screenshot(scenario: dict, events: list[str]) -> str:
+    _app, decision_count = _live_demo_state(scenario, events)
     title = f"{scenario['title']} ({scenario['id']})"
     event_trace = " -> ".join(events) or "none"
-    lines = [title, f"AR: {scenario['context']['ar_id']}  revision: {scenario['context']['task_revision']}", "", "INPUT: " + " ".join(scenario["actions"]), "EVENTS: " + event_trace, "", "Human-in-the-loop decision session complete"]
+    lines = [title, f"AR: {scenario['context']['ar_id']}  revision: {scenario['context']['task_revision']}", "DOCUMENTS: design <-> workplan", f"DECISIONS: {decision_count} anchored points", "", "INPUT: " + " ".join(scenario["actions"]), "EVENTS: " + event_trace, "", "Human-in-the-loop decision session complete"]
     text = "\n".join(lines)
     rows = "".join(f'<text x="24" y="{42 + i * 24}">{html.escape(line)}</text>' for i, line in enumerate(lines))
     description = f"Synthetic TUI workflow. Input actions: {' '.join(scenario['actions'])}. Emitted events: {event_trace}."
@@ -70,7 +91,8 @@ def _artifacts(root: Path = ROOT) -> dict[Path, str]:
             raise ValueError(f"{scenario_id}: expected {scenario['expected_events']}, got {events}")
         filename = f"{scenario_id}.svg"
         screenshots[Path("docs/screenshots") / filename] = screenshot(scenario, events)
-        results.append({"id": scenario_id, "title": scenario["title"], "events": events, "screenshot": f"docs/screenshots/{filename}"})
+        _app, decision_count = _live_demo_state(scenario, events)
+        results.append({"id": scenario_id, "title": scenario["title"], "events": events, "decision_count": decision_count, "screenshot": f"docs/screenshots/{filename}"})
     manifest = {"schema_version": 1, "scenario_count": len(results), "results": results}
     artifacts = dict(screenshots)
     artifacts[Path("artifacts/scenario-results.json")] = json.dumps(manifest, indent=2, sort_keys=True) + "\n"

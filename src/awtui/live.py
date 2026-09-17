@@ -597,6 +597,24 @@ def build_application_from_awg_request(request: dict, *, project_id: str, sessio
     return build_application_from_context(context, decisions=decisions, on_event=on_event, record_event=record_event)
 
 
+def build_application_from_structure_graph(graph: dict, *, project_id: str, session_id: str, on_event=None, record_event=None) -> Application:
+    """Build the TUI from authoritative AR graph nodes and anchors."""
+    from .graph import structure_graph_to_tui
+    from .awg import request_digest
+    documents, decisions = structure_graph_to_tui(graph)
+    context = {
+        "project_id": project_id,
+        "ar_id": graph.get("ar_id", "AR-GRAPH"),
+        "task_revision": graph.get("task_revision", 1),
+        "packet_digest": graph.get("packet_digest", request_digest(graph)),
+        "session_id": session_id,
+        "contract_versions": {"awg": "0.2", "tui": "1", "awq": "1", "coordinator": "1"},
+        "request_id": graph.get("request_id"),
+        "documents": documents,
+    }
+    return build_application_from_context(context, decisions=decisions, on_event=on_event, record_event=record_event)
+
+
 def run_application(application: Application, *, output_fn=print) -> int:
     """Run the app and report a concise status after terminal cleanup.
 

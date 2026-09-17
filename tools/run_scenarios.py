@@ -121,10 +121,13 @@ def _action_chunks(action: str) -> list[bytes]:
     if action == "escape":
         return [b"\x1b"]
     if action == "a":
-        # The real editor needs a syntactically valid proposal before Enter.
-        # Keep these separate so prompt-toolkit has time to focus the editor;
-        # otherwise characters such as ``r`` could hit global bindings.
-        return [b"a", b"Scenario proposal|Synthetic rationale|0.7|Synthetic trade-off", b"\n"]
+        # Drive the same four-field form a human uses.  Each chunk is paced by
+        # the replay loop so focus changes are observable and action letters
+        # remain ordinary text while editing.
+        return [
+            b"a", b"Scenario proposal", b"\t", b"Synthetic rationale",
+            b"\t", b"0.7", b"\t", b"Synthetic trade-off", b"\n", b"\n",
+        ]
     if len(action) == 1:
         return [action.encode()]
     raise ValueError(f"unknown live action: {action}")
@@ -182,10 +185,26 @@ def _run_live_replay(scenario: dict) -> tuple[object, list[str], list[str], str]
                     break
             if not thread.is_alive():
                 break
+            # Live sessions now protect unresolved/unsaved work with an exit
+            # confirmation.  Scenario replay completes that explicit prompt
+            # with Enter so every generated workflow still terminates.
+            if action == "q" and thread.is_alive():
+                app.awtui_state.input_mode = False
+                app.awtui_state.proposal_confirm = False
+                pipe.send_bytes(b"\x1b[C\r")
+                time.sleep(_HUMAN_DELAY)
+                cast_events.append([round(elapsed, 3), "o", _cast_frame(app)])
+                elapsed += _HUMAN_DELAY
+                break
         if thread.is_alive():
+            app.awtui_state.input_mode = False
+            app.awtui_state.proposal_confirm = False
             pipe.send_bytes(b"q")
             time.sleep(_HUMAN_DELAY)
             cast_events.append([round(elapsed, 3), "o", _cast_frame(app)])
+            pipe.send_bytes(b"\x1b[C\r")
+            time.sleep(_HUMAN_DELAY)
+            cast_events.append([round(elapsed + _HUMAN_DELAY, 3), "o", _cast_frame(app)])
         thread.join(3)
         if thread.is_alive():
             raise RuntimeError("scenario TUI did not exit")

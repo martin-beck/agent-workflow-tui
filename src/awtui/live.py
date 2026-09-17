@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from dataclasses import replace
 from prompt_toolkit.application import Application
+from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
-from prompt_toolkit.layout import Dimension, HSplit, Layout, VSplit
+from prompt_toolkit.layout import ConditionalContainer, Dimension, HSplit, Layout, VSplit
+from prompt_toolkit.filters import Condition
 from prompt_toolkit.layout.processors import Processor, Transformation
 from prompt_toolkit.widgets import Frame, TextArea
 from .discussion import DiscussionPacket, DecisionResponse, PacketPoint, Proposal
@@ -71,6 +73,9 @@ class LiveInteraction:
         self.document_mode = packet.document
         self.responses: dict[str, DecisionResponse] = {}
         self.input_mode = False
+        self.saved = False
+        self.exit_confirm = False
+        self.exit_confirm_index = 0
     @property
     def point(self): return self.packet.points[self.point_index]
     @property
@@ -93,15 +98,23 @@ class LiveInteraction:
         point = replace(self.point, proposals=self.point.proposals + (proposal,))
         self.packet = replace(self.packet, points=self.packet.points[:self.point_index] + (point,) + self.packet.points[self.point_index+1:])
         self.proposal_index = len(point.proposals)-1
+        self.saved = False
         self._refresh_callback()
     def respond(self, disposition: str) -> DecisionResponse:
         user = self.proposal if self.proposal.label.startswith("User: ") else None
         response = DecisionResponse(self.point.point_id, disposition, self.proposal.label if disposition == "select" else None, user, user is not None)
         self.responses[self.point.point_id] = response
+        self.saved = False
         self._refresh_callback()
         return response
     def render_points(self) -> str:
         lines = []
+        selected = sum(response.disposition == "select" for response in self.responses.values())
+        clarification = sum(response.disposition == "clarify" for response in self.responses.values())
+        unresolved = len(self.packet.points) - selected
+        save_state = "saved" if self.saved else "unsaved"
+        lines.append(f"Overall: {selected}/{len(self.packet.points)} selected | {clarification} clarification requested | {unresolved} remaining | state {save_state}")
+        lines.append("")
         for i, point in enumerate(self.packet.points):
             response = self.responses.get(point.point_id)
             user_proposal = next((proposal for proposal in point.proposals if proposal.label.startswith("User: ")), None)
@@ -130,6 +143,15 @@ class LiveInteraction:
         response = self.responses.get(self.point.point_id)
         prefix = "Clarification requested: this decision is not answered.\n\n" if response and response.disposition == "clarify" else ""
         return prefix + f"Proposal {self.proposal_index + 1}/{len(self.point.proposals)}: {p.label}\n\nRationale: {p.rationale}\nConfidence: {p.confidence:.2f}\nTrade-offs: {p.tradeoffs}\n\nAnchor: {self.point.anchor}\nHighlight: {self.active_highlight()}\nImplications: {self.point.implications}\nEvidence gap: {self.point.evidence_gap or 'none recorded'}\nHuman intent is separate from implementation and quality evidence."
+
+    def exit_requirements(self) -> list[str]:
+        missing = [point.point_id for point in self.packet.points if self.responses.get(point.point_id, None) is None or self.responses[point.point_id].disposition != "select"]
+        requirements = []
+        if missing:
+            requirements.append("select a proposal for: " + ", ".join(missing))
+        if not self.saved:
+            requirements.append("save the current decision state (s)")
+        return requirements
 
     def switch_document(self):
         self.document_mode = "workplan" if self.document_mode != "workplan" else "design"
@@ -196,6 +218,8 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     design_document = design_document if design_document is not None else document
     packet = packet or (_packet_from_decisions(decisions, design_document, workplan) if decisions else None)
     interaction = LiveInteraction(packet or _default_packet(design_document, points))
+    interaction.proposal_edit_index = 0
+    interaction.proposal_confirm = False
     document_view = TextArea(
         text=render_markdown(design_document),
         read_only=True,
@@ -204,13 +228,48 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     )
     points_view = TextArea(text=interaction.render_points() if packet else points, read_only=True, scrollbar=True)
     helper_view = TextArea(text=interaction.render_helper() if packet else helper, read_only=True, scrollbar=True)
-    editor = TextArea(text="", multiline=True, scrollbar=True, height=3, prompt="New proposal (label | rationale | confidence | trade-offs): ")
-    editor.visible = False
-    footer = TextArea(text="↑/↓: decision  ←/→: proposal  tab/w/d: workplan/design  page-up/page-down: scroll document  enter: select  r: reject  c: clarify  m: evidence  a: add proposal  s: save  o: reopen  q: quit", read_only=True, height=1)
+    editor_fields = [
+        TextArea(text="", multiline=False, height=1, prompt="Label: "),
+        TextArea(text="", multiline=False, height=1, prompt="Rationale: "),
+        TextArea(text="", multiline=False, height=1, prompt="Confidence (0..1): "),
+        TextArea(text="", multiline=False, height=1, prompt="Trade-offs: "),
+    ]
+    # ``editor`` remains the public first-field alias used by scenario drivers.
+    editor = editor_fields[0]
+    editor_form = ConditionalContainer(
+        HSplit(editor_fields, height=Dimension(min=4, max=4, preferred=4)),
+        filter=Condition(lambda: interaction.input_mode and not interaction.proposal_confirm),
+    )
+    confirmation_view = TextArea(text="", read_only=True, height=3)
+    confirmation = ConditionalContainer(
+        confirmation_view,
+        filter=Condition(lambda: interaction.input_mode and interaction.proposal_confirm),
+    )
+    footer = TextArea(text="↑/↓: decision  ←/→: proposal  tab/w/d: workplan/design  page-up/page-down: scroll document  enter: select  r: reject  c: clarify  m: evidence  a: add proposal  s: save  o: reopen  q: quit", read_only=True, height=1, style="class:footer")
     bindings = KeyBindings()
     def refresh():
+        for field in editor_fields:
+            field.visible = interaction.input_mode and not interaction.proposal_confirm
+        editor.visible = interaction.input_mode and not interaction.proposal_confirm
         points_view.text = interaction.render_points() if packet else points
-        helper_view.text = ("Enter: label | rationale | confidence (0..1) | trade-offs" if interaction.input_mode else (interaction.render_helper() if packet else helper))
+        if interaction.input_mode:
+            if interaction.proposal_confirm:
+                options = ("Yes", "No")
+                choices = "    ".join(("▶ " if i == getattr(interaction, "confirm_index", 0) else "  ") + value for i, value in enumerate(options))
+                confirmation_view.text = f"Confirm own proposal?\n{choices}\nUse ←/→/↑/↓, then Enter."
+                helper_view.text = "Review the four proposal fields. Enter confirms; Escape cancels."
+            else:
+                helper_view.text = (
+                    f"Own proposal field {interaction.proposal_edit_index + 1}/4. "
+                    "Tab/Enter/↑/↓ switches fields; action keys are entered as text."
+                )
+        else:
+            helper_view.text = interaction.render_helper() if packet else helper
+        if interaction.exit_confirm:
+            requirements = interaction.exit_requirements()
+            options = ("No, stay", "Yes, exit")
+            choices = "    ".join(("▶ " if i == interaction.exit_confirm_index else "  ") + value for i, value in enumerate(options))
+            helper_view.text = "Work remains:\n- " + "\n- ".join(requirements) + f"\n\nExit the TUI anyway?\n{choices}\nUse ←/→/↑/↓, then Enter."
         document = workplan if interaction.document_mode == "workplan" else design_document
         rendered = render_markdown(document)
         if packet:
@@ -277,6 +336,8 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
                 refresh()
                 helper_view.text = f"Event not accepted: {acknowledgement.reason}"
                 return
+        if event_type == "safe-exit":
+            interaction.saved = True
         refresh()
         if response is not None and response.disposition == "clarify":
             helper_view.text = (
@@ -287,23 +348,79 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         if on_event is not None: on_event(event_type)
         if transport is not None:
             application.awtui_last_acknowledgement = acknowledgement
+    def cancel_proposal_input(event):
+        interaction.input_mode = False
+        interaction.proposal_confirm = False
+        for field in editor_fields: field.text = ""
+        event.app.layout.focus(points_view)
+        refresh()
+
     @bindings.add("q")
     @bindings.add("escape")
     def quit_app(event):
         if interaction.input_mode and event.key_sequence[0].key == "escape":
-            interaction.input_mode = False; editor.visible = False; editor.text = ""; event.app.layout.focus(points_view); refresh()
+            cancel_proposal_input(event)
+        elif event.key_sequence[0].key == "escape":
+            # Escape is the explicit immediate-cancel affordance; q remains
+            # the guarded exit path that explains unsaved/unresolved work.
+            event.app.exit(result=130)
+        elif interaction.exit_confirm:
+            interaction.exit_confirm = False
+            refresh()
+        elif interaction.exit_requirements():
+            interaction.exit_confirm = True
+            interaction.exit_confirm_index = 0
+            refresh()
         elif interaction.input_mode:
             event.app.current_buffer.insert_text(event.key_sequence[0].key)
         elif not event.app.is_done:
             event.app.exit(result=0)
+    def focus_proposal_field(event, index):
+        interaction.proposal_edit_index = index % len(editor_fields)
+        event.app.layout.focus(editor_fields[interaction.proposal_edit_index])
+        refresh()
+
+    def move_proposal_field(event, delta):
+        if interaction.proposal_confirm:
+            interaction.confirm_index = (getattr(interaction, "confirm_index", 0) + delta) % 2
+            refresh()
+            return
+        focus_proposal_field(event, interaction.proposal_edit_index + delta)
+
     @bindings.add("up")
-    def up(event): interaction.move_point(-1); refresh()
+    def up(event):
+        if interaction.input_mode:
+            move_proposal_field(event, -1)
+        elif interaction.exit_confirm:
+            interaction.exit_confirm_index = (interaction.exit_confirm_index - 1) % 2; refresh()
+        else:
+            interaction.move_point(-1); refresh()
     @bindings.add("down")
-    def down(event): interaction.move_point(1); refresh()
+    def down(event):
+        if interaction.input_mode:
+            move_proposal_field(event, 1)
+        elif interaction.exit_confirm:
+            interaction.exit_confirm_index = (interaction.exit_confirm_index + 1) % 2; refresh()
+        else:
+            interaction.move_point(1); refresh()
     @bindings.add("left")
-    def left(event): interaction.move_proposal(-1); refresh()
+    def left(event):
+        if interaction.input_mode:
+            if interaction.proposal_confirm: move_proposal_field(event, -1)
+            else: event.app.current_buffer.cursor_left()
+        elif interaction.exit_confirm:
+            interaction.exit_confirm_index = (interaction.exit_confirm_index - 1) % 2; refresh()
+        else:
+            interaction.move_proposal(-1); refresh()
     @bindings.add("right")
-    def right(event): interaction.move_proposal(1); refresh()
+    def right(event):
+        if interaction.input_mode:
+            if interaction.proposal_confirm: move_proposal_field(event, 1)
+            else: event.app.current_buffer.cursor_right()
+        elif interaction.exit_confirm:
+            interaction.exit_confirm_index = (interaction.exit_confirm_index + 1) % 2; refresh()
+        else:
+            interaction.move_proposal(1); refresh()
     def page_document(event, delta):
         """Scroll the document pane while preserving active decision state."""
         buffer = document_view.buffer
@@ -315,20 +432,60 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     @bindings.add(Keys.PageDown)
     def page_down(event): page_document(event, 1)
     @bindings.add("tab")
-    def toggle_document(event): interaction.switch_document()
+    def toggle_document(event):
+        if interaction.input_mode:
+            move_proposal_field(event, 1)
+        else:
+            interaction.switch_document()
+    @bindings.add("s-tab")
+    def reverse_proposal_field(event):
+        if interaction.input_mode: move_proposal_field(event, -1)
     @bindings.add("w")
-    def workplan_key(event): interaction.document_mode = "workplan"; interaction._manual_document_switch = True; refresh()
+    def workplan_key(event):
+        if interaction.input_mode: event.app.current_buffer.insert_text("w")
+        else: interaction.document_mode = "workplan"; interaction._manual_document_switch = True; refresh()
     @bindings.add("d")
-    def design_key(event): interaction.document_mode = "design"; interaction._manual_document_switch = True; refresh()
+    def design_key(event):
+        if interaction.input_mode: event.app.current_buffer.insert_text("d")
+        else: interaction.document_mode = "design"; interaction._manual_document_switch = True; refresh()
     @bindings.add("enter")
     def enter(event):
+        if interaction.exit_confirm:
+            if interaction.exit_confirm_index == 1:
+                event.app.exit(result=0)
+            else:
+                interaction.exit_confirm = False
+                refresh()
+            return
         if interaction.input_mode:
-            fields = [x.strip() for x in editor.text.split("|", 3)]
-            try:
-                if len(fields) != 4 or not fields[0] or not fields[1] or not fields[3]: raise ValueError
-                proposal = Proposal("User: " + fields[0], fields[1], float(fields[2]), fields[3])
-            except (ValueError, TypeError): helper_view.text = "Invalid proposal. Use label | rationale | confidence (0..1) | trade-offs"; return
-            interaction.add_proposal(proposal); interaction.input_mode = False; editor.visible = False; editor.text = ""; event.app.layout.focus(points_view); emit(event, "add-proposal"); return
+            if not interaction.proposal_confirm:
+                if interaction.proposal_edit_index < len(editor_fields) - 1:
+                    move_proposal_field(event, 1)
+                    return
+                raw = [field.text.strip() for field in editor_fields]
+                try:
+                    if any(not value for value in raw) or not 0 <= float(raw[2]) <= 1: raise ValueError
+                    interaction.confirm_index = 0
+                    interaction.proposal_confirm = True
+                    refresh()
+                except (ValueError, TypeError):
+                    helper_view.text = "Invalid proposal: complete every field; confidence must be between 0 and 1."
+                return
+            if getattr(interaction, "confirm_index", 0) == 0:
+                raw = [field.text.strip() for field in editor_fields]
+                proposal = Proposal("User: " + raw[0], raw[1], float(raw[2]), raw[3])
+                interaction.add_proposal(proposal)
+                interaction.input_mode = False
+                interaction.proposal_confirm = False
+                for field in editor_fields: field.text = ""
+                event.app.layout.focus(points_view)
+                emit(event, "add-proposal")
+            else:
+                interaction.proposal_confirm = False
+                interaction.proposal_edit_index = 0
+                event.app.layout.focus(editor_fields[0])
+                refresh()
+            return
         emit(event, "select")
     for key, event_type in (("r", "reject"), ("c", "clarify"), ("m", "request-more-evidence"), ("s", "safe-exit"), ("o", "reopen")):
         @bindings.add(key)
@@ -345,7 +502,11 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         if interaction.input_mode:
             event.app.current_buffer.insert_text("a")
             return
-        interaction.input_mode = True; editor.visible = True; event.app.layout.focus(editor); refresh()
+        interaction.input_mode = True
+        interaction.proposal_confirm = False
+        interaction.proposal_edit_index = 0
+        event.app.layout.focus(editor_fields[0])
+        refresh()
     # Keep the pane geometry independent of the amount of text in a document,
     # proposal, or helper message.  The weighted dimensions are deliberately
     # attached to the containers (rather than inferred from TextArea content):
@@ -358,8 +519,8 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     helper_height = Dimension(min=6, max=12, preferred=9, weight=1)
     document_row = VSplit(
         [
-            Frame(document_view, title="Design / Workplan", width=pane_width),
-            Frame(points_view, title="Decisions and proposals", width=pane_width),
+            Frame(document_view, title="Design / Workplan", width=pane_width, style="class:document-pane"),
+            Frame(points_view, title="Decisions and proposals", width=pane_width, style="class:decision-pane"),
         ],
         padding=1,
         width=Dimension(weight=1),
@@ -367,18 +528,26 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     )
     helper_frame = Frame(
         helper_view,
-        title="Helper: rationale, implications, evidence",
+        title="Helper: rationale, implications, evidence", style="class:helper-pane",
         width=Dimension(weight=1),
         height=helper_height,
     )
     body = HSplit(
-        [document_row, helper_frame, editor, footer],
+        [document_row, helper_frame, editor_form, confirmation, footer],
         width=Dimension(weight=1),
         height=Dimension(weight=1),
     )
     application = Application(
         layout=Layout(body), key_bindings=bindings, full_screen=True,
         erase_when_done=True,
+        style=Style.from_dict({
+            "frame.border": "ansiblue",
+            "frame.label": "bold ansicyan",
+            "document-pane.frame.border": "ansigreen",
+            "decision-pane.frame.border": "ansiyellow",
+            "helper-pane.frame.border": "ansimagenta",
+            "footer": "bg:#202530 #d7f9ff",
+        }),
     )
     interaction._refresh = refresh
     refresh()
@@ -389,7 +558,10 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         "pane_width": pane_width,
         "helper": helper_height,
     }
-    application.editor = editor; application.interaction = interaction; application.awtui_state = interaction
+    application.editor = editor
+    application.editor_fields = tuple(editor_fields)
+    application.confirmation_view = confirmation_view
+    application.interaction = interaction; application.awtui_state = interaction
     return application
 
 

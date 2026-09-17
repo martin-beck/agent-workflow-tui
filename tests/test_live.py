@@ -1,5 +1,16 @@
 from awtui.live import build_application
 from pathlib import Path
+from types import SimpleNamespace
+
+
+def _binding(app, key):
+    aliases = {"enter": "Keys.ControlM", "tab": "Keys.ControlI", "escape": "Keys.Escape", "right": "Keys.Right"}
+    wanted = aliases.get(key, key)
+    return next(binding for binding in app.key_bindings.bindings if str(binding.keys[0]) == wanted)
+
+
+def _event(app, key):
+    return SimpleNamespace(app=app, key_sequence=[SimpleNamespace(key=key)])
 
 
 def test_prompt_toolkit_application_has_two_panes_and_quit_binding():
@@ -107,6 +118,67 @@ def test_clarify_requests_more_context_without_marking_decision_answered():
     assert "✅ answered" not in rendered
     assert "A" in rendered and "B" in rendered
     assert "Clarification requested" in app.awtui_panes[2].text
+
+
+def test_own_proposal_is_a_four_field_modal_form_with_confirmation():
+    app = build_application(decisions=[{"point_id": "p", "anchor": "design:L1", "question": "Choose", "proposals": [{"label": "A"}, {"label": "B"}]}])
+    add = _binding(app, "a")
+    enter = _binding(app, "enter")
+    right = _binding(app, "right")
+
+    add.handler(_event(app, "a"))
+    assert app.interaction.input_mode is True
+    assert app.editor.visible is True
+    assert len(app.editor_fields) == 4
+
+    # Action letters are ordinary text while editing.
+    app.editor.text = "rSafer rollout"
+    assert app.editor.text == "rSafer rollout"
+    enter.handler(_event(app, "enter"))
+    assert app.interaction.proposal_edit_index == 1
+    app.editor_fields[1].text = "Because it limits blast radius"
+    enter.handler(_event(app, "enter"))
+    app.editor_fields[2].text = "0.9"
+    enter.handler(_event(app, "enter"))
+    app.editor_fields[3].text = "Slower delivery"
+    enter.handler(_event(app, "enter"))
+
+    assert app.interaction.proposal_confirm is True
+    assert "Confirm own proposal?" in app.confirmation_view.text
+    assert "▶ Yes" in app.confirmation_view.text
+
+    right.handler(_event(app, "right"))
+    assert "▶ No" in app.confirmation_view.text
+    enter.handler(_event(app, "enter"))
+    assert app.interaction.input_mode is True
+    assert app.interaction.proposal_confirm is False
+
+    # Return to confirmation and accept it.
+    app.editor_fields[3].text = "Slower delivery"
+    enter.handler(_event(app, "enter"))
+    enter.handler(_event(app, "enter"))
+    enter.handler(_event(app, "enter"))
+    enter.handler(_event(app, "enter"))
+    assert app.interaction.proposal_confirm is True
+    enter.handler(_event(app, "enter"))
+    assert app.interaction.input_mode is False
+    assert "User: rSafer rollout" in app.awtui_panes[1].text
+
+
+def test_status_and_exit_prompt_explain_unresolved_or_unsaved_work():
+    app = build_application(decisions=[{"point_id": "p", "anchor": "design:L1", "question": "Choose", "proposals": [{"label": "A"}, {"label": "B"}]}])
+    assert "0/1 selected" in app.awtui_panes[1].text
+    assert "state unsaved" in app.awtui_panes[1].text
+
+    q = _binding(app, "q")
+    q.handler(_event(app, "q"))
+    assert app.interaction.exit_confirm is True
+    assert "select a proposal for: p" in app.awtui_panes[2].text
+    assert "save the current decision state (s)" in app.awtui_panes[2].text
+
+    # Escape/second q cancels the exit prompt and returns to the session.
+    q.handler(_event(app, "q"))
+    assert app.interaction.exit_confirm is False
 
 
 def test_user_proposal_is_visible_and_can_be_replaced_before_commit():

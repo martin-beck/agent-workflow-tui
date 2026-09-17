@@ -160,7 +160,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S16` revision `6`
 - **Input actions:** `m, r`
 - **Emitted events:** `request-more-evidence, reject`
-- **Screenshot:** [open terminal capture](../docs/screenshots/evidence-then-reject.svg)
+- **Screenshot:** [open terminal capture](screenshots/evidence-then-reject.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -170,7 +170,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S17` revision `8`
 - **Input actions:** `o, s`
 - **Emitted events:** `reopen, safe-exit`
-- **Screenshot:** [open terminal capture](../docs/screenshots/reopen-save.svg)
+- **Screenshot:** [open terminal capture](screenshots/reopen-save.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -180,7 +180,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S18` revision `2`
 - **Input actions:** `a, c, enter`
 - **Emitted events:** `add-proposal, clarify, select`
-- **Screenshot:** [open terminal capture](../docs/screenshots/alternative-clarify.svg)
+- **Screenshot:** [open terminal capture](screenshots/alternative-clarify.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -190,7 +190,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S19` revision `9`
 - **Input actions:** `m, escape`
 - **Emitted events:** `request-more-evidence`
-- **Screenshot:** [open terminal capture](../docs/screenshots/cancel-after-review.svg)
+- **Screenshot:** [open terminal capture](screenshots/cancel-after-review.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -200,6 +200,6 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S20` revision `10`
 - **Input actions:** `enter, c, r, s`
 - **Emitted events:** `select, clarify, reject, safe-exit`
-- **Screenshot:** [open terminal capture](../docs/screenshots/multi-point-handoff.svg)
+- **Screenshot:** [open terminal capture](screenshots/multi-point-handoff.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.

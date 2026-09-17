@@ -4,6 +4,13 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: tui-scenarios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   replay-and-refresh:
     runs-on: ubuntu-latest
@@ -12,11 +19,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: pip
       - run: python -m pip install --upgrade pip
       - run: python -m pip install . pytest
       - run: python tools/validate_scenarios.py
       - run: python tools/run_scenarios.py
       - run: python tools/generate_scenario_docs.py
+      - run: python tools/check_scenario_docs.py
       - run: python -m pytest -q
       - name: Fail on stale generated artifacts
-        run: git diff --exit-code -- artifacts docs/SCENARIOS.md docs/screenshots
+        run: |
+          git diff --check
+          git diff --exit-code -- artifacts docs/SCENARIOS.md docs/screenshots
+          test -z "$(git ls-files --others --exclude-standard -- artifacts docs/SCENARIOS.md docs/screenshots)"

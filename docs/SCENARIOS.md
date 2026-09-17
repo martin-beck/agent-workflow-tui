@@ -10,7 +10,7 @@ These workflows are generated from `scenarios/corpus.json` and replayed through 
 - **AR context:** `AR-S01` revision `1`
 - **Input actions:** `enter`
 - **Emitted events:** `select`
-- **Screenshot:** [open terminal capture](../docs/screenshots/basic-select.svg)
+- **Screenshot:** [open terminal capture](screenshots/basic-select.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -20,7 +20,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S02` revision `2`
 - **Input actions:** `r`
 - **Emitted events:** `reject`
-- **Screenshot:** [open terminal capture](../docs/screenshots/reject-risk.svg)
+- **Screenshot:** [open terminal capture](screenshots/reject-risk.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -30,7 +30,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S03` revision `1`
 - **Input actions:** `c`
 - **Emitted events:** `clarify`
-- **Screenshot:** [open terminal capture](../docs/screenshots/clarify-ownership.svg)
+- **Screenshot:** [open terminal capture](screenshots/clarify-ownership.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -40,7 +40,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S04` revision `3`
 - **Input actions:** `m`
 - **Emitted events:** `request-more-evidence`
-- **Screenshot:** [open terminal capture](../docs/screenshots/more-evidence.svg)
+- **Screenshot:** [open terminal capture](screenshots/more-evidence.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -50,7 +50,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S05` revision `1`
 - **Input actions:** `a, enter`
 - **Emitted events:** `add-proposal, select`
-- **Screenshot:** [open terminal capture](../docs/screenshots/add-alternative.svg)
+- **Screenshot:** [open terminal capture](screenshots/add-alternative.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -60,7 +60,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S06` revision `4`
 - **Input actions:** `s`
 - **Emitted events:** `safe-exit`
-- **Screenshot:** [open terminal capture](../docs/screenshots/safe-exit.svg)
+- **Screenshot:** [open terminal capture](screenshots/safe-exit.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -70,7 +70,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S07` revision `2`
 - **Input actions:** `o`
 - **Emitted events:** `reopen`
-- **Screenshot:** [open terminal capture](../docs/screenshots/targeted-reopen.svg)
+- **Screenshot:** [open terminal capture](screenshots/targeted-reopen.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -80,7 +80,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S08` revision `1`
 - **Input actions:** `enter, q`
 - **Emitted events:** `select`
-- **Screenshot:** [open terminal capture](../docs/screenshots/batch-partial.svg)
+- **Screenshot:** [open terminal capture](screenshots/batch-partial.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -90,7 +90,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S09` revision `2`
 - **Input actions:** `c, enter`
 - **Emitted events:** `clarify, select`
-- **Screenshot:** [open terminal capture](../docs/screenshots/batch-clarify.svg)
+- **Screenshot:** [open terminal capture](screenshots/batch-clarify.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -100,7 +100,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S10` revision `1`
 - **Input actions:** `escape`
 - **Emitted events:** `none`
-- **Screenshot:** [open terminal capture](../docs/screenshots/escape-exit.svg)
+- **Screenshot:** [open terminal capture](screenshots/escape-exit.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -110,7 +110,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S11` revision `5`
 - **Input actions:** `m, c`
 - **Emitted events:** `request-more-evidence, clarify`
-- **Screenshot:** [open terminal capture](../docs/screenshots/reask-after-gap.svg)
+- **Screenshot:** [open terminal capture](screenshots/reask-after-gap.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -120,7 +120,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S12` revision `1`
 - **Input actions:** `a, r`
 - **Emitted events:** `add-proposal, reject`
-- **Screenshot:** [open terminal capture](../docs/screenshots/proposal-reject.svg)
+- **Screenshot:** [open terminal capture](screenshots/proposal-reject.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -130,7 +130,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S13` revision `7`
 - **Input actions:** `o, c`
 - **Emitted events:** `reopen, clarify`
-- **Screenshot:** [open terminal capture](../docs/screenshots/revision-reopen.svg)
+- **Screenshot:** [open terminal capture](screenshots/revision-reopen.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -140,7 +140,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S14` revision `2`
 - **Input actions:** `enter, s`
 - **Emitted events:** `select, safe-exit`
-- **Screenshot:** [open terminal capture](../docs/screenshots/transport-roundtrip.svg)
+- **Screenshot:** [open terminal capture](screenshots/transport-roundtrip.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
 
@@ -150,6 +150,6 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **AR context:** `AR-S15` revision `3`
 - **Input actions:** `c, m, a, enter, s`
 - **Emitted events:** `clarify, request-more-evidence, add-proposal, select, safe-exit`
-- **Screenshot:** [open terminal capture](../docs/screenshots/full-contest.svg)
+- **Screenshot:** [open terminal capture](screenshots/full-contest.svg)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.

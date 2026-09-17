@@ -74,6 +74,24 @@ def _terminal_snapshot(app) -> list[str]:
     return lines
 
 
+def _cast_frame(app) -> str:
+    """Build a stable terminal frame from the actual live widget state.
+
+    Prompt-toolkit's renderer emits timing-sensitive cursor repaint bytes. For
+    committed documentation, capture the post-input widget frame instead;
+    this keeps the asciinema animation deterministic while still exercising
+    and displaying the real TUI state after every human-paced key action.
+    """
+    panes = getattr(app, "awtui_panes", ())
+    sections = []
+    for name, pane in zip(("DOCUMENT", "DECISIONS", "HELPER"), panes):
+        sections.append(f"--- {name} PANE ---\n{pane.text}")
+    if getattr(app.editor, "visible", False):
+        sections.append(f"--- PROPOSAL INPUT ---\n{app.editor.text}")
+    sections.append(f"--- FOOTER ---\n{app.awtui_footer.text}")
+    return "\x1b[2J\x1b[H" + "\n\n".join(sections) + "\n"
+
+
 def screenshot(scenario: dict, events: list[str], snapshot: list[str] | None = None) -> str:
     app, decision_count = _live_demo_state(scenario, events)
     snapshot = snapshot or _terminal_snapshot(app)
@@ -147,7 +165,6 @@ def _run_live_replay(scenario: dict) -> tuple[object, list[str], list[str], str]
         # are intentionally human-paced so the casts are useful to reviewers.
         replay_actions = ["down", "up", "right", "left", "tab", "workplan", "design", "page-down", "page-up"] + list(scenario["actions"])
         cast_events: list[list[object]] = []
-        previous = ""
         elapsed = 0.0
         for action in replay_actions:
             for chunk_index, chunk in enumerate(_action_chunks(action)):
@@ -159,10 +176,7 @@ def _run_live_replay(scenario: dict) -> tuple[object, list[str], list[str], str]
                     app.layout.focus(app.awtui_panes[1])
                 pipe.send_bytes(chunk)
                 time.sleep(_HUMAN_DELAY)
-                current = stream.getvalue()
-                if current != previous:
-                    cast_events.append([round(elapsed, 3), "o", current[len(previous):]])
-                    previous = current
+                cast_events.append([round(elapsed, 3), "o", _cast_frame(app)])
                 elapsed += _HUMAN_DELAY
                 if not thread.is_alive():
                     break
@@ -171,9 +185,7 @@ def _run_live_replay(scenario: dict) -> tuple[object, list[str], list[str], str]
         if thread.is_alive():
             pipe.send_bytes(b"q")
             time.sleep(_HUMAN_DELAY)
-            current = stream.getvalue()
-            if current != previous:
-                cast_events.append([round(elapsed, 3), "o", current[len(previous):]])
+            cast_events.append([round(elapsed, 3), "o", _cast_frame(app)])
         thread.join(3)
         if thread.is_alive():
             raise RuntimeError("scenario TUI did not exit")

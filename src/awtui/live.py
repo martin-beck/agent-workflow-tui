@@ -130,7 +130,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         helper_view.text = ("Enter: label | rationale | confidence (0..1) | trade-offs" if interaction.input_mode else (interaction.render_helper() if packet else helper))
         document = workplan if interaction.document_mode == "workplan" else design_document
         rendered = render_markdown(document)
-        document_view.text = f"{rendered}\n\n▶ ACTIVE DECISION ANCHOR: {interaction.point.anchor}" if packet else rendered
+        document_view.text = f"▶ ACTIVE DECISION ANCHOR: {interaction.point.anchor}\n\n{rendered}" if packet else rendered
     def emit(event, event_type):
         if packet and event_type in {"select", "reject", "clarify"}: interaction.respond(event_type)
         refresh()

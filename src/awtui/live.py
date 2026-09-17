@@ -7,6 +7,22 @@ from prompt_toolkit.layout import HSplit, Layout, VSplit
 from prompt_toolkit.widgets import Frame, TextArea
 
 
+RECORDED_CONTROLS = {"\n": "select", "\r": "select", "r": "reject", "c": "clarify", "m": "request-more-evidence", "a": "add-proposal", "s": "safe-exit", "o": "reopen"}
+
+
+def dispatch_recorded_input(keys: str, on_event) -> list[str]:
+    """Replay bounded terminal keystrokes through the same public event names."""
+    emitted = []
+    for key in keys:
+        if key in RECORDED_CONTROLS:
+            event_type = RECORDED_CONTROLS[key]
+            emitted.append(event_type)
+            on_event(event_type)
+        elif key in {"q", "\x1b"}:
+            break
+    return emitted
+
+
 def build_application(*, document: str = "Awaiting AR context", points: str = "No discussion points", helper: str = "Select a point for implications and evidence", on_event=None) -> Application:
     left = TextArea(text=document, read_only=True, scrollbar=True)
     right = TextArea(text=points, read_only=True, scrollbar=True)

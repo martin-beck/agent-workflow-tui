@@ -60,3 +60,15 @@ def test_coordinator_adapter_records_only_accepted_events():
     else:
         raise AssertionError("stale event reached Coordinator")
     assert len(recorded) == 1
+
+
+def test_awq_evidence_is_revision_bound_and_separate_from_intent():
+    from awtui.awq import check_evidence
+    evidence = {"ar_id": "AR-0010", "task_revision": 2, "kind": "formal", "status": "pass", "digest": "sha256:" + "d" * 64}
+    assert check_evidence(evidence, ar_id="AR-0010", task_revision=2)["user_intent"] == "separate"
+    try:
+        check_evidence({**evidence, "task_revision": 3}, ar_id="AR-0010", task_revision=2)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("stale evidence was accepted")

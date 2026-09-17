@@ -36,6 +36,7 @@ def demo_decisions(scenario: dict) -> list[dict]:
         "anchor": f"{document}:L{index * 10}",
         "question": f"{title}: decision {index}",
         "highlight": {"design": ("Design boundary" if index == 1 else "Validation path"), "workplan": "Rollout step"}[document],
+        "highlights": {"design": "Design boundary" if index == 1 else "Validation path", "workplan": "Rollout step"},
         "proposals": [
             {"label": "Conservative", "rationale": "Minimize change", "confidence": .8, "tradeoffs": "slower delivery"},
             {"label": "Expedite", "rationale": "Shorten feedback loop", "confidence": .6, "tradeoffs": "higher review load"},

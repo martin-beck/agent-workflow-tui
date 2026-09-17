@@ -75,6 +75,9 @@ class LiveInteraction:
     def point(self): return self.packet.points[self.point_index]
     @property
     def proposal(self): return self.point.proposals[self.proposal_index]
+    def active_highlight(self, document_mode: str | None = None) -> str:
+        mode = document_mode or self.document_mode
+        return self.point.document_highlights.get(mode, self.point.highlight or self.point.question)
     def move_point(self, delta: int):
         self.point_index = max(0, min(len(self.packet.points)-1, self.point_index + delta)); self.proposal_index = 0
     def move_proposal(self, delta: int):
@@ -126,7 +129,7 @@ class LiveInteraction:
         p = self.proposal
         response = self.responses.get(self.point.point_id)
         prefix = "Clarification requested: this decision is not answered.\n\n" if response and response.disposition == "clarify" else ""
-        return prefix + f"Proposal {self.proposal_index + 1}/{len(self.point.proposals)}: {p.label}\n\nRationale: {p.rationale}\nConfidence: {p.confidence:.2f}\nTrade-offs: {p.tradeoffs}\n\nAnchor: {self.point.anchor}\nHighlight: {self.point.highlight or self.point.question}\nImplications: {self.point.implications}\nEvidence gap: {self.point.evidence_gap or 'none recorded'}\nHuman intent is separate from implementation and quality evidence."
+        return prefix + f"Proposal {self.proposal_index + 1}/{len(self.point.proposals)}: {p.label}\n\nRationale: {p.rationale}\nConfidence: {p.confidence:.2f}\nTrade-offs: {p.tradeoffs}\n\nAnchor: {self.point.anchor}\nHighlight: {self.active_highlight()}\nImplications: {self.point.implications}\nEvidence gap: {self.point.evidence_gap or 'none recorded'}\nHuman intent is separate from implementation and quality evidence."
 
     def switch_document(self):
         self.document_mode = "workplan" if self.document_mode != "workplan" else "design"
@@ -156,7 +159,7 @@ def _packet_from_decisions(decisions, design_document: str, workplan: str) -> Di
         proposals = tuple(Proposal(p.get("label", "Proposal"), p.get("rationale", "No rationale recorded"), float(p.get("confidence", .5)), p.get("tradeoffs", "No trade-offs recorded")) for p in raw.get("proposals", []))
         while len(proposals) < 2:
             proposals += (Proposal("Request evidence", "Gather missing evidence", .5, "Delays decision"),)
-        points.append(PacketPoint(raw["point_id"], raw.get("anchor", "document:1"), raw.get("question", "What should happen?"), proposals, raw.get("helper", raw.get("implications", "Review downstream implications")), raw.get("evidence_gap", ""), highlight=raw.get("highlight", raw.get("question", ""))))
+        points.append(PacketPoint(raw["point_id"], raw.get("anchor", "document:1"), raw.get("question", "What should happen?"), proposals, raw.get("helper", raw.get("implications", "Review downstream implications")), raw.get("evidence_gap", ""), highlight=raw.get("highlight", raw.get("question", "")), document_highlights=dict(raw.get("highlights", {}))))
     return DiscussionPacket("interactive", 1, tuple(points), "design")
 
 
@@ -166,6 +169,7 @@ def _standalone_demo_decisions() -> list[dict]:
         "anchor": anchor,
         "question": question,
         "highlight": {"design:L4": "Design boundary", "workplan:L8": "Rollout step", "design:L16": "Validation path"}[anchor],
+        "highlights": {"design": "Design boundary" if anchor == "design:L4" else "Validation path" if anchor == "design:L16" else "Design boundary", "workplan": "Rollout step"},
         "proposals": [
             {"label": "Conservative", "rationale": "Minimize change", "confidence": .8, "tradeoffs": "slower delivery"},
             {"label": "Expedite", "rationale": "Shorten feedback loop", "confidence": .6, "tradeoffs": "higher review load"},
@@ -196,7 +200,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         text=render_markdown(design_document),
         read_only=True,
         scrollbar=True,
-        input_processors=[_ActiveHighlightProcessor(lambda: interaction.point.highlight or interaction.point.question if packet else "")],
+        input_processors=[_ActiveHighlightProcessor(lambda: interaction.active_highlight() if packet else "")],
     )
     points_view = TextArea(text=interaction.render_points() if packet else points, read_only=True, scrollbar=True)
     helper_view = TextArea(text=interaction.render_helper() if packet else helper, read_only=True, scrollbar=True)
@@ -211,7 +215,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         rendered = render_markdown(document)
         if packet:
             point = interaction.point
-            phrase = point.highlight or point.question or point.anchor
+            phrase = interaction.active_highlight()
             # If the selected phrase is only present in the other authoritative
             # document, follow its anchor.  This keeps normal manual w/d
             # inspection possible when both documents contain the phrase.

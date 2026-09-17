@@ -1,7 +1,7 @@
 """AWG discussion packet projection used by the terminal renderer."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -24,6 +24,10 @@ class PacketPoint:
     # Text to bring into view when this decision is active.  It is optional
     # so packets produced by older Agent Workflow integrations remain valid.
     highlight: str = ""
+    # Optional document-specific targets used when a human switches between
+    # the design and work-plan panes.  Older packets continue to use
+    # ``highlight`` as their fallback target.
+    document_highlights: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         if not self.point_id or not self.anchor or len(self.proposals) < 2:

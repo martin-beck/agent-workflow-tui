@@ -19,6 +19,36 @@ def test_live_controls_emit_explicit_event_types():
         assert events[-1] == expected
 
 
+def test_live_application_erases_final_frame_on_terminal_exit():
+    app = build_application()
+    assert app.erase_when_done is True
+
+
+def test_run_application_reports_only_safe_status_after_interrupt():
+    from awtui.live import run_application
+
+    class Interrupted:
+        def run(self, **_kwargs):
+            raise KeyboardInterrupt
+
+    output = []
+    assert run_application(Interrupted(), output_fn=output.append) == 130
+    assert output == ["TUI interrupted; terminal restored."]
+
+
+def test_run_application_redacts_exception_details():
+    from awtui.live import run_application
+
+    class Broken:
+        def run(self, **_kwargs):
+            raise RuntimeError("private prompt /srv/secret")
+
+    output = []
+    assert run_application(Broken(), output_fn=output.append) == 1
+    assert output == ["TUI stopped (RuntimeError); terminal restored."]
+    assert "/srv/secret" not in output[0]
+
+
 def test_live_navigation_switches_documents_and_tracks_decision_anchor():
     app = build_application(
         workplan="WORKPLAN: ship parser",
@@ -52,3 +82,29 @@ def test_live_footer_advertises_document_and_focus_controls():
     assert "tab/w/d: workplan/design" in footer
     assert "↑/↓: decision" in footer
     assert "←/→: proposal" in footer
+
+
+def test_live_state_navigates_proposals_and_records_batch_response():
+    app = build_application(
+        decisions=[{"point_id": "p1", "anchor": "design:1", "question": "Choose?",
+                    "proposals": [{"label": "one", "rationale": "fast", "confidence": .8, "tradeoffs": "risk"},
+                                  {"label": "two", "rationale": "safe", "confidence": .6, "tradeoffs": "slow"}]},
+                   {"point_id": "p2", "anchor": "plan:2", "question": "Deploy?",
+                    "proposals": [{"label": "canary"}, {"label": "direct"}]}],
+    )
+    state = app.awtui_state
+    state.next_proposal(1)
+    assert state.proposal.label == "two"
+    state.respond("select")
+    state.move(1)
+    assert state.unanswered if hasattr(state, "unanswered") else "p2" not in state.responses
+    assert "answered" in app.awtui_panes[1].text
+
+
+def test_live_add_proposal_parser_updates_current_point():
+    app = build_application(decisions=[{"point_id": "p1", "anchor": "design:1", "question": "Choose?", "proposals": [{"label": "one"}, {"label": "two"}]}])
+    state = app.awtui_state
+    state.add_proposal(__import__("awtui.discussion", fromlist=["Proposal"]).Proposal("User: custom", "because", .9, "reversible"))
+    assert state.proposal.label == "User: custom"
+    assert "User: custom" in app.awtui_panes[1].text
+    assert "Proposal 3/3" in app.awtui_panes[2].text

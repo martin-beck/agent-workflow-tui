@@ -30,3 +30,17 @@ def test_stale_or_cross_ar_shape_rejected(tmp_path):
     bad["ar_id"] = "AR-99"
     bad["unexpected"] = True
     assert run(bad, "event", tmp_path).returncode != 0
+
+
+def test_session_boundary_advances_only_matching_sequence():
+    from awtui.boundary import SessionBoundary
+    boundary = SessionBoundary.from_context(context())
+    accepted = boundary.accept(event())
+    assert accepted.next_sequence == 2
+    bad = {**event(), "sequence": 1, "task_revision": 2}
+    try:
+        accepted.accept(bad)
+    except ValueError as error:
+        assert "task_revision" in str(error)
+    else:
+        raise AssertionError("stale revision was accepted")

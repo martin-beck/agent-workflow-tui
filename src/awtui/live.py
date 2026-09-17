@@ -6,12 +6,54 @@ from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import Dimension, HSplit, Layout, VSplit
+from prompt_toolkit.layout.processors import Processor, Transformation
 from prompt_toolkit.widgets import Frame, TextArea
 from .discussion import DiscussionPacket, DecisionResponse, PacketPoint, Proposal
 from .markdown import render_markdown
 from .transport import LiveSessionTransport, EventAcknowledgement
 
 RECORDED_CONTROLS = {"\n": "select", "\r": "select", "r": "reject", "c": "clarify", "m": "request-more-evidence", "a": "add-proposal", "s": "safe-exit", "o": "reopen"}
+
+
+class _ActiveHighlightProcessor(Processor):
+    """Paint the selected decision's source phrase in the document pane.
+
+    Rich supplies the document's terminal Markdown rendering, while this
+    prompt-toolkit processor adds the interaction-specific visual state.  The
+    source buffer remains plain text so scrolling, searching, and tests keep
+    their normal offsets.
+    """
+
+    def __init__(self, phrase):
+        self._phrase = phrase
+
+    def apply_transformation(self, transformation_input):
+        phrase = (self._phrase() or "").casefold()
+        fragments = transformation_input.fragments
+        if not phrase:
+            return Transformation(fragments)
+        line = "".join(text for _style, text in fragments)
+        start = line.casefold().find(phrase)
+        if start < 0:
+            return Transformation(fragments)
+        end = start + len(phrase)
+        transformed = []
+        offset = 0
+        for style, text in fragments:
+            fragment_end = offset + len(text)
+            if fragment_end <= start or offset >= end:
+                transformed.append((style, text))
+            else:
+                before = max(0, start - offset)
+                after = max(0, fragment_end - end)
+                if before:
+                    transformed.append((style, text[:before]))
+                match_end = len(text) - after if after else len(text)
+                transformed.append(("bg:ansigreen fg:ansiwhite bold", text[before:match_end]))
+                if after:
+                    transformed.append((style, text[-after:]))
+            offset = fragment_end
+        return Transformation(transformed)
 
 def dispatch_recorded_input(keys: str, on_event) -> list[str]:
     emitted = []
@@ -141,7 +183,12 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     design_document = design_document if design_document is not None else document
     packet = packet or (_packet_from_decisions(decisions, design_document, workplan) if decisions else None)
     interaction = LiveInteraction(packet or _default_packet(design_document, points))
-    document_view = TextArea(text=render_markdown(design_document), read_only=True, scrollbar=True)
+    document_view = TextArea(
+        text=render_markdown(design_document),
+        read_only=True,
+        scrollbar=True,
+        input_processors=[_ActiveHighlightProcessor(lambda: interaction.point.highlight or interaction.point.question if packet else "")],
+    )
     points_view = TextArea(text=interaction.render_points() if packet else points, read_only=True, scrollbar=True)
     helper_view = TextArea(text=interaction.render_helper() if packet else helper, read_only=True, scrollbar=True)
     editor = TextArea(text="", multiline=True, scrollbar=True, height=3, prompt="New proposal (label | rationale | confidence | trade-offs): ")
@@ -184,9 +231,17 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
                 document_view.text += f"\n\n▶ HIGHLIGHT NOT FOUND IN DOCUMENT: {phrase}"
                 position = document_view.text.casefold().find(phrase.casefold())
             document_view.buffer.cursor_position = max(0, position)
+            # BufferControl renders search matches with its configured
+            # highlight style.  Keeping the search state on the rendered
+            # Markdown (rather than inserting marker characters) preserves
+            # valid Markdown/text while making the active phrase visibly
+            # highlighted in every live terminal.
+            document_view.control.search_state.text = phrase
+            document_view.control.search_state.ignore_case = True
         else:
             document_view.text = rendered
             document_view.buffer.cursor_position = 0
+            document_view.control.search_state.text = ""
     def emit(event, event_type):
         response = None
         previous_response = interaction.responses.get(interaction.point.point_id) if packet else None

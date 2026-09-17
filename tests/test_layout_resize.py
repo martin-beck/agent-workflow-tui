@@ -1,6 +1,8 @@
 from prompt_toolkit.layout import Dimension
+from prompt_toolkit.layout.processors import TransformationInput
 
 from awtui.live import build_application
+from awtui.live import _ActiveHighlightProcessor
 
 
 def _dimension_values(dimension):
@@ -36,3 +38,29 @@ def test_full_screen_application_can_reflow_without_rebuilding_panes():
     # bounded layout tree remains authoritative for both old and new sizes.
     assert app.layout.container is root
     assert app.awtui_panes[0].control is not None
+
+
+def test_active_document_phrase_has_terminal_highlight_style():
+    processor = _ActiveHighlightProcessor(lambda: "Boundary phrase")
+    transformed = processor.apply_transformation(
+        TransformationInput(None, None, 0, None, [("", "A Boundary phrase is here")], 80, 10)
+    )
+
+    assert ("bg:ansigreen fg:ansiwhite bold", "Boundary phrase") in transformed.fragments
+
+
+def test_live_document_uses_highlight_processor_for_active_decision():
+    app = build_application(
+        design_document="# Design\n\nBoundary phrase",
+        decisions=[
+            {
+                "point_id": "boundary",
+                "anchor": "design:L3",
+                "highlight": "Boundary phrase",
+                "question": "Which boundary?",
+                "proposals": [{"label": "A"}, {"label": "B"}],
+            }
+        ],
+    )
+    processors = app.awtui_panes[0].control.input_processors
+    assert any(isinstance(processor, _ActiveHighlightProcessor) for processor in processors)

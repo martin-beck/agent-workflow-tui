@@ -1,4 +1,4 @@
-from awtui.scenario_helper import choose_scenario, run_interactive
+from awtui.scenario_helper import choose_scenario, demo_decisions, run_interactive
 from pathlib import Path
 
 
@@ -6,7 +6,7 @@ class FakeApp:
     def __init__(self, events):
         self.events = events
 
-    def run(self):
+    def run(self, **_kwargs):
         self.events("select")
 
 
@@ -30,6 +30,14 @@ def test_helper_launches_tui_and_reports_events():
     assert events == ["select"]
     assert "Scenario complete:" in output[-2]
     assert captured["on_event"] is not None
+    assert len(captured["decisions"]) == 3
+    assert captured["workplan"].startswith("WORKPLAN")
+
+
+def test_demo_decisions_have_distinct_document_anchors():
+    decisions = demo_decisions({"id": "demo", "title": "Demo"})
+    assert len(decisions) == 3
+    assert {item["anchor"] for item in decisions} == {"design:L10", "workplan:L20", "design:L30"}
 
 
 def test_zero_argument_launcher_bootstraps_src_import_path():

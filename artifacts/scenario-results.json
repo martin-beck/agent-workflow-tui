@@ -1,0 +1,134 @@
+{
+  "results": [
+    {
+      "events": [
+        "select"
+      ],
+      "id": "basic-select",
+      "screenshot": "docs/screenshots/basic-select.svg",
+      "title": "Select ranked option"
+    },
+    {
+      "events": [
+        "reject"
+      ],
+      "id": "reject-risk",
+      "screenshot": "docs/screenshots/reject-risk.svg",
+      "title": "Reject risky proposal"
+    },
+    {
+      "events": [
+        "clarify"
+      ],
+      "id": "clarify-ownership",
+      "screenshot": "docs/screenshots/clarify-ownership.svg",
+      "title": "Clarify ownership boundary"
+    },
+    {
+      "events": [
+        "request-more-evidence"
+      ],
+      "id": "more-evidence",
+      "screenshot": "docs/screenshots/more-evidence.svg",
+      "title": "Request rollout evidence"
+    },
+    {
+      "events": [
+        "add-proposal",
+        "select"
+      ],
+      "id": "add-alternative",
+      "screenshot": "docs/screenshots/add-alternative.svg",
+      "title": "Add oracle alternative"
+    },
+    {
+      "events": [
+        "safe-exit"
+      ],
+      "id": "safe-exit",
+      "screenshot": "docs/screenshots/safe-exit.svg",
+      "title": "Save before interruption"
+    },
+    {
+      "events": [
+        "reopen"
+      ],
+      "id": "targeted-reopen",
+      "screenshot": "docs/screenshots/targeted-reopen.svg",
+      "title": "Reopen contradicted point"
+    },
+    {
+      "events": [
+        "select"
+      ],
+      "id": "batch-partial",
+      "screenshot": "docs/screenshots/batch-partial.svg",
+      "title": "Answer one of three batched points"
+    },
+    {
+      "events": [
+        "clarify",
+        "select"
+      ],
+      "id": "batch-clarify",
+      "screenshot": "docs/screenshots/batch-clarify.svg",
+      "title": "Clarify then select independent points"
+    },
+    {
+      "events": [],
+      "id": "escape-exit",
+      "screenshot": "docs/screenshots/escape-exit.svg",
+      "title": "Escape cancels live session"
+    },
+    {
+      "events": [
+        "request-more-evidence",
+        "clarify"
+      ],
+      "id": "reask-after-gap",
+      "screenshot": "docs/screenshots/reask-after-gap.svg",
+      "title": "Re-ask after evidence gap"
+    },
+    {
+      "events": [
+        "add-proposal",
+        "reject"
+      ],
+      "id": "proposal-reject",
+      "screenshot": "docs/screenshots/proposal-reject.svg",
+      "title": "Reject oracle-added proposal"
+    },
+    {
+      "events": [
+        "reopen",
+        "clarify"
+      ],
+      "id": "revision-reopen",
+      "screenshot": "docs/screenshots/revision-reopen.svg",
+      "title": "Reopen after revision change"
+    },
+    {
+      "events": [
+        "select",
+        "safe-exit"
+      ],
+      "id": "transport-roundtrip",
+      "screenshot": "docs/screenshots/transport-roundtrip.svg",
+      "title": "Complete transport round trip"
+    },
+    {
+      "events": [
+        "clarify",
+        "request-more-evidence",
+        "add-proposal",
+        "select",
+        "safe-exit"
+      ],
+      "id": "full-contest",
+      "screenshot": "docs/screenshots/full-contest.svg",
+      "title": "Contest and resolve a decision"
+    }
+  ],
+  "scenario_count": 15,
+  "schema_version": 1
+}

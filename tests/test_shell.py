@@ -45,6 +45,18 @@ def test_packet_preserves_ranked_proposals_and_identity():
     assert packet.active().evidence_gap == "needs runtime evidence"
 
 
+def test_two_pane_renderer_keeps_anchor_and_marks_unresolved():
+    from awtui.app import draw_packet
+    from awtui.discussion import DiscussionPacket, PacketPoint, Proposal
+    proposals = (Proposal("a", "small", .8, "less scope"), Proposal("b", "safe", .6, "more work"))
+    packet = DiscussionPacket("AR-0018", 1, (PacketPoint("design", "design:42", "Which?", proposals, "impact", unresolved=True),))
+    screen = Screen()
+    draw_packet(screen, packet)
+    rendered = " ".join(str(call) for call in screen.calls)
+    assert "design:42" in rendered
+    assert "unresolved" in rendered
+
+
 def test_decision_session_keeps_responses_per_point_and_evaluates_added_proposal():
     from awtui.discussion import DecisionResponse, DecisionSession, DiscussionPacket, PacketPoint, Proposal
     proposals = (Proposal("a", "small", .8, "less scope"), Proposal("b", "safe", .6, "more work"))

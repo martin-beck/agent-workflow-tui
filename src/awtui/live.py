@@ -158,10 +158,36 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             return
         interaction.input_mode = True; editor.visible = True; event.app.layout.focus(editor); refresh()
     body = HSplit([VSplit([Frame(document_view, title="Design / Workplan"), Frame(points_view, title="Decisions and proposals")]), Frame(helper_view, title="Helper: rationale, implications, evidence"), editor, footer])
-    application = Application(layout=Layout(body), key_bindings=bindings, full_screen=True)
+    application = Application(
+        layout=Layout(body), key_bindings=bindings, full_screen=True,
+        erase_when_done=True,
+    )
     interaction._refresh = refresh
     application.awtui_panes = (document_view, points_view, helper_view); application.awtui_footer = footer; application.editor = editor; application.interaction = interaction; application.awtui_state = interaction
-    application.erase_when_done = True
     return application
 
-def main() -> int: return int(build_application().run())
+
+def run_application(application: Application, *, output_fn=print) -> int:
+    """Run the app and report a concise status after terminal cleanup.
+
+    prompt-toolkit restores raw mode, resize handlers, the renderer, and the
+    alternate screen in its ``finally`` path. Disabling its interactive error
+    screen means this boundary reports only a safe summary after that cleanup,
+    without tracebacks, packet contents, prompts, or host paths.
+    """
+    try:
+        result = application.run(set_exception_handler=False, handle_sigint=True)
+    except KeyboardInterrupt:
+        output_fn("TUI interrupted; terminal restored.")
+        return 130
+    except EOFError:
+        output_fn("TUI input closed; terminal restored.")
+        return 0
+    except BaseException as error:
+        output_fn(f"TUI stopped ({type(error).__name__}); terminal restored.")
+        return 1
+    return int(result or 0)
+
+
+def main() -> int:
+    return run_application(build_application())

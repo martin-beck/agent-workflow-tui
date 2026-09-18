@@ -101,6 +101,8 @@ class DecisionWindow:
     def _reopen(self) -> None:
         self.interaction.responses.pop(self.interaction.point.point_id, None)
         self.interaction.saved = False
+        if self.on_event is not None:
+            self.on_event({"event_type": "reopen", "point_id": self.interaction.point.point_id})
         self._refresh()
 
     def _switch_document(self) -> None:
@@ -110,7 +112,10 @@ class DecisionWindow:
         self.interaction.saved = True; self._refresh()
 
     def _save_exit(self) -> None:
-        self._save(); self.window.close()
+        self._save()
+        if self.on_event is not None:
+            self.on_event({"event_type": "safe-exit", "point_id": self.interaction.point.point_id})
+        self.window.close()
 
     def _edit(self) -> None:
         if not self.interaction.begin_edit_proposal():
@@ -132,6 +137,10 @@ class DecisionWindow:
             try:
                 proposal = Proposal("User: " + fields[0].text().strip(), fields[1].text().strip(), float(fields[2].text()), fields[3].text().strip())
                 self.interaction.add_proposal(proposal); self._refresh()
+                if self.on_event is not None:
+                    self.on_event({"event_type": "add-proposal", "point_id": self.interaction.point.point_id,
+                                   "user_proposal": {"label": proposal.label, "rationale": proposal.rationale,
+                                                      "confidence": proposal.confidence, "tradeoffs": proposal.tradeoffs}})
             except (ValueError, TypeError) as error:
                 QtWidgets.QMessageBox.warning(self.window, "Invalid proposal", str(error))
 

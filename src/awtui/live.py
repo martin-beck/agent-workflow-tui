@@ -651,16 +651,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--session-file", type=Path, help="private Coordinator request JSON")
     args = parser.parse_args(argv)
     if args.session_file is not None:
-        from .host import attach_session
+        from .host import append_event, attach_session
 
         request = attach_session(args.session_file)
         guidance = request["guidance_request"]
         documents = request.get("documents")
+        event_log = args.session_file.with_suffix(".events.jsonl")
+
+        def record_event(event: dict) -> None:
+            append_event(event_log, event)
+
         application = build_application_from_awg_request(
             guidance,
             project_id=request["project_id"],
             session_id=request["session_id"],
             documents=documents if isinstance(documents, dict) else None,
+            record_event=record_event,
         )
         return run_application(application)
     return run_application(build_application(

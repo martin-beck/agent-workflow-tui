@@ -4,6 +4,7 @@ import pytest
 
 from awtui.host import (
     attach_session,
+    append_event,
     detect_launch_mode,
     handoff_message,
     launch_argv,
@@ -53,3 +54,11 @@ def test_unsafe_request_is_rejected(tmp_path):
     bad["session_id"] = "../escape"
     with pytest.raises(ValueError, match="filename"):
         write_session_file(bad, tmp_path)
+
+
+def test_event_journal_is_private_bounded_and_append_only(tmp_path):
+    path = tmp_path / "session.events.jsonl"
+    append_event(path, {"session_id": "s-1", "sequence": 1, "event_type": "select"})
+    append_event(path, {"session_id": "s-1", "sequence": 2, "event_type": "reconciled"})
+    assert path.read_text().count("session_id") == 2
+    assert os.stat(path).st_mode & 0o077 == 0

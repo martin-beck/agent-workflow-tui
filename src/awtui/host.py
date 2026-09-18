@@ -67,6 +67,26 @@ def attach_session(path: str | Path) -> dict[str, Any]:
     return value
 
 
+def append_event(path: str | Path, event: dict[str, Any]) -> None:
+    """Append one bounded revision-bound event to a private session journal."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    encoded = (json.dumps(event, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    current = target.stat().st_size if target.exists() else 0
+    if current + len(encoded) > MAX_SESSION_BYTES:
+        raise ValueError("session event journal exceeds bounded size")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
+    fd = os.open(target, flags, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(encoded)
+            stream.flush()
+            os.fsync(stream.fileno())
+    finally:
+        if target.exists() and stat.S_IMODE(target.stat().st_mode) & 0o077:
+            target.chmod(0o600)
+
+
 def launch_argv(mode: str, session_file: str | Path) -> list[str] | None:
     """Return an argv for a host launcher, or None for manual handoff."""
     if mode not in LAUNCH_MODES:

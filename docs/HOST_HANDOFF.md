@@ -22,8 +22,10 @@ revision, request reference, decision packet, and Markdown design/work-plan
 documents. It must not contain credentials, raw host prompts, or private
 transcripts. Start the TUI with `--session-file` to validate and render it.
 
-Submitting a choice produces revision-bound TUI events. Coordinator remains the
-only component allowed to persist the AR outcome. If the terminal disconnects,
-the user reruns the same attach command; stale revisions are rejected rather
-than silently applied. A clarification or incomplete batch leaves the worker
-waiting, while accepted independent points can be resumed individually.
+Submitting a choice produces revision-bound TUI events in the private sibling
+`*.events.jsonl` journal. The Coordinator/agent host consumes that journal and
+remains the only component allowed to persist the AR outcome. If the terminal
+disconnects, the user reruns the same attach command; stale revisions are
+rejected rather than silently applied. A clarification or incomplete batch
+leaves the worker waiting, while accepted independent points can be resumed
+individually.

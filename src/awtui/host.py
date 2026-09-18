@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import stat
 import sys
 from pathlib import Path
@@ -74,3 +75,17 @@ def launch_argv(mode: str, session_file: str | Path) -> list[str] | None:
         return None
     command = ["awtui-live", "--session-file", str(session_file)]
     return ["tmux", "new-window", *command] if mode == "tmux" else command
+
+
+def handoff_message(mode: str, session_file: str | Path, *, summary: str) -> str:
+    """Render a concise user-facing handoff without launching a process."""
+    if mode not in LAUNCH_MODES:
+        raise ValueError("unknown launch mode")
+    command = shlex.join(["awtui-live", "--session-file", str(session_file)])
+    if mode == "manual":
+        action = f"Run in a user-controlled terminal:\n  {command}"
+    elif mode == "tmux":
+        action = f"Open a configured tmux window with:\n  {shlex.join(launch_argv(mode, session_file) or [])}"
+    else:
+        action = "The configured terminal host can launch the TUI in the current session."
+    return f"HUMAN DECISION REQUIRED\n{summary}\n{action}\nWaiting for Coordinator acceptance."

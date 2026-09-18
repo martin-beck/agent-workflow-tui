@@ -2,7 +2,13 @@ import os
 
 import pytest
 
-from awtui.host import attach_session, detect_launch_mode, launch_argv, write_session_file
+from awtui.host import (
+    attach_session,
+    detect_launch_mode,
+    handoff_message,
+    launch_argv,
+    write_session_file,
+)
 
 
 def request():
@@ -21,6 +27,10 @@ def test_mode_detection_is_deterministic_and_bounded():
     assert detect_launch_mode(environ={}, stdin_tty=False, stdout_tty=False) == "manual"
     assert launch_argv("manual", "/tmp/x") is None
     assert launch_argv("tmux", "/tmp/x")[:2] == ["tmux", "new-window"]
+    assert "HUMAN DECISION REQUIRED" in handoff_message("manual", "/tmp/x", summary="2 decisions")
+    assert "awtui-live --session-file /tmp/x" in handoff_message(
+        "manual", "/tmp/x", summary="2 decisions"
+    )
 
 
 def test_private_session_file_can_be_attached(tmp_path):

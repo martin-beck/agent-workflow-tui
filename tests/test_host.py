@@ -36,7 +36,8 @@ def test_mode_detection_is_deterministic_and_bounded():
 
 def test_private_session_file_can_be_attached(tmp_path):
     path = write_session_file(request(), tmp_path)
-    assert os.stat(path).st_mode & 0o077 == 0
+    if os.name != "nt":
+        assert os.stat(path).st_mode & 0o077 == 0
     assert attach_session(path)["session_id"] == "s-1"
 
 
@@ -61,4 +62,5 @@ def test_event_journal_is_private_bounded_and_append_only(tmp_path):
     append_event(path, {"session_id": "s-1", "sequence": 1, "event_type": "select"})
     append_event(path, {"session_id": "s-1", "sequence": 2, "event_type": "reconciled"})
     assert path.read_text().count("session_id") == 2
-    assert os.stat(path).st_mode & 0o077 == 0
+    if os.name != "nt":
+        assert os.stat(path).st_mode & 0o077 == 0

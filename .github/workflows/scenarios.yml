@@ -29,6 +29,7 @@ jobs:
         with:
           name: gui-batch-screenshot
           path: artifacts/gui-batch.png
+      - run: rm -f artifacts/gui-batch.png
       - run: asciinema --version
       - run: python tools/validate_scenarios.py
       - run: python tools/run_scenarios.py

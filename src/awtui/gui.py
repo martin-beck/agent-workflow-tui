@@ -60,7 +60,7 @@ class DecisionWindow:
         self.proposals = QtWidgets.QListWidget(); self.proposals.currentRowChanged.connect(self._select_proposal); right_layout.addWidget(self.proposals, 2)
         self.helper = QtWidgets.QTextBrowser(); right_layout.addWidget(self.helper, 3)
         buttons = QtWidgets.QHBoxLayout()
-        for label, callback in (("Select", self._select), ("Reject", lambda: self._respond("reject")), ("Clarify", lambda: self._respond("clarify")), ("Edit own proposal", self._edit)):
+        for label, callback in (("Select", self._select), ("Reject", lambda: self._respond("reject")), ("Clarify", lambda: self._respond("clarify")), ("More evidence", self._request_evidence), ("Reopen", self._reopen), ("Edit own proposal", self._edit)):
             button = QtWidgets.QPushButton(label); button.clicked.connect(callback); buttons.addWidget(button)
         right_layout.addLayout(buttons)
         bottom = QtWidgets.QHBoxLayout()
@@ -89,6 +89,14 @@ class DecisionWindow:
 
     def _select(self) -> None:
         self._respond("select")
+
+    def _request_evidence(self) -> None:
+        self.helper.setPlainText("More evidence requested for this decision. The Coordinator will keep it unresolved until evidence is supplied.")
+
+    def _reopen(self) -> None:
+        self.interaction.responses.pop(self.interaction.point.point_id, None)
+        self.interaction.saved = False
+        self._refresh()
 
     def _switch_document(self) -> None:
         self.interaction.switch_document(); self._refresh()

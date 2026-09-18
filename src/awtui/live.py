@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 from prompt_toolkit.application import Application
 from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
@@ -637,7 +638,31 @@ def run_application(application: Application, *, output_fn=print) -> int:
     return int(result or 0)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    """Run the standalone demo or attach to a Coordinator session file.
+
+    The session-file path is intentionally an explicit opt-in.  A remote
+    worker can prepare the handoff, but it never guesses which local terminal
+    the user owns or spawns a shell on the user's behalf.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="awtui-live")
+    parser.add_argument("--session-file", type=Path, help="private Coordinator request JSON")
+    args = parser.parse_args(argv)
+    if args.session_file is not None:
+        from .host import attach_session
+
+        request = attach_session(args.session_file)
+        guidance = request["guidance_request"]
+        documents = request.get("documents")
+        application = build_application_from_awg_request(
+            guidance,
+            project_id=request["project_id"],
+            session_id=request["session_id"],
+            documents=documents if isinstance(documents, dict) else None,
+        )
+        return run_application(application)
     return run_application(build_application(
         design_document="# Design document\n\nDefine the service boundary and validation strategy.",
         workplan="# Workplan\n\n1. Agree boundary\n2. Stage rollout\n3. Validate outcomes",

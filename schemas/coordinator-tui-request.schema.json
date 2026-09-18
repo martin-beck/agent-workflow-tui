@@ -10,6 +10,13 @@
     "kind": {"const": "coordinator-tui-request"},
     "project_id": {"type": "string", "minLength": 1},
     "session_id": {"type": "string", "minLength": 1},
+    "documents": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "design": {"type": "string"},
+        "workplan": {"type": "string"}
+      }
+    },
     "ar": {
       "type": "object", "additionalProperties": false,
       "required": ["ar_id", "task_revision", "status", "description", "specification"],

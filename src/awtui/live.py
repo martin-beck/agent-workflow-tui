@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+import sys
 from prompt_toolkit.application import Application
 from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
@@ -701,17 +702,30 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(prog="awtui-live")
     parser.add_argument("--session-file", type=Path, help="private Coordinator request JSON")
+    parser.add_argument("--input-json", action="store_true", help="read one Coordinator request JSON object from stdin")
+    parser.add_argument("--output-json", type=Path, help="atomically write the latest revision-bound event JSON")
     args = parser.parse_args(argv)
-    if args.session_file is not None:
+    if args.session_file is not None and args.input_json:
+        parser.error("--session-file and --input-json are mutually exclusive")
+    if args.session_file is not None or args.input_json:
         from .host import append_event, attach_session
+        from .transport_io import read_json, write_json_file
 
-        request = attach_session(args.session_file)
+        if args.input_json:
+            request = read_json(sys.stdin)
+        else:
+            request = attach_session(args.session_file)
+        if request.get("kind") != "coordinator-tui-request":
+            parser.error("input is not a coordinator-tui-request")
         guidance = request["guidance_request"]
         documents = request.get("documents")
-        event_log = args.session_file.with_suffix(".events.jsonl")
+        event_log = args.session_file.with_suffix(".events.jsonl") if args.session_file else None
 
         def record_event(event: dict) -> None:
-            append_event(event_log, event)
+            if args.output_json is not None:
+                write_json_file(event, args.output_json)
+            if event_log is not None:
+                append_event(event_log, event)
 
         application = build_application_from_awg_request(
             guidance,

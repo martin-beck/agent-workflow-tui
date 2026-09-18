@@ -41,6 +41,20 @@ jobs:
             asciinema play --out-fmt asciicast --speed 1000 "$recording" >/dev/null
           done
       - run: python -m pytest -q
+      - name: Exercise actual ephemeral SSH round trip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssh-server
+          sudo useradd --create-home --shell /bin/sh awui-ci || true
+          ssh-keygen -q -t ed25519 -N '' -f "$RUNNER_TEMP/awui-ci-key"
+          sudo install -d -m 700 -o awui-ci -g awui-ci /home/awui-ci/.ssh
+          sudo install -m 600 -o awui-ci -g awui-ci "$RUNNER_TEMP/awui-ci-key.pub" /home/awui-ci/.ssh/authorized_keys
+          sudo mkdir -p /run/sshd
+          sudo /usr/sbin/sshd -t
+          sudo /usr/sbin/sshd -D -p 22222 -o PidFile="$RUNNER_TEMP/awui-sshd.pid" -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o PermitRootLogin=no -o AllowUsers=awui-ci &
+          sshd_pid=$!
+          trap 'sudo kill "$sshd_pid"' EXIT
+          python tools/run_ssh_roundtrip.py --host 127.0.0.1 --port 22222 --user awui-ci --identity "$RUNNER_TEMP/awui-ci-key" --remote-dir /tmp/awui-roundtrip --insecure-host-key-check
       - name: Fail on stale generated artifacts
         run: |
           git diff --check

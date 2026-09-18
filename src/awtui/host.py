@@ -13,6 +13,46 @@ LAUNCH_MODES = {"inline", "tty", "tmux", "manual"}
 MAX_SESSION_BYTES = 2 * 1024 * 1024
 
 
+def powershell_ssh_handoff_command(
+    *,
+    ssh_host: str,
+    remote_session_file: str | Path,
+    remote_event_file: str | Path | None = None,
+    local_session_file: str = "$env:TEMP\\awui-session.json",
+    local_event_file: str = "$env:TEMP\\awui-events.json",
+    backend: str = "gui",
+) -> str:
+    """Build a copyable Windows PowerShell SSH round-trip command.
+
+    ``ssh_host`` is deliberately passed unchanged to OpenSSH, so the user's
+    existing ``~/.ssh/config`` alias, ProxyJump, identity, and port settings
+    are honored.  The remote coordinator remains the persistence authority:
+    the request is copied down, the local UI runs, and the revision-bound
+    event file is copied back only after the UI exits.
+    """
+    if not ssh_host or any(ch in ssh_host for ch in "\r\n;&|`$"):
+        raise ValueError("ssh_host must be a plain SSH config alias or host name")
+    if backend not in {"gui", "tui"}:
+        raise ValueError("backend must be gui or tui")
+    remote_request = str(remote_session_file).replace("'", "'\\''")
+    remote_result = str(remote_event_file or f"{remote_session_file}.events.jsonl").replace("'", "'\\''")
+    executable = "awui-live" if backend == "gui" else "awtui-live"
+    return (
+        f"ssh {ssh_host} \"cat -- '{remote_request}'\" > \"{local_session_file}\"; "
+        f"{executable} --session-file \"{local_session_file}\" --output-json \"{local_event_file}\"; "
+        f"scp \"{local_event_file}\" {ssh_host}:'{remote_result}'; "
+        f"Remove-Item -Force \"{local_session_file}\",\"{local_event_file}\""
+    )
+
+
+def client_capabilities(*, environ: dict[str, str] | None = None) -> dict[str, str]:
+    """Return explicit client facts; SSH does not expose the client OS."""
+    env = os.environ if environ is None else environ
+    platform = env.get("AWUI_CLIENT_PLATFORM", "windows" if env.get("OS") == "Windows_NT" else sys.platform)
+    shell = env.get("AWUI_CLIENT_SHELL", "powershell" if platform == "windows" else env.get("SHELL", "sh"))
+    return {"platform": platform, "shell": shell, "ssh_config": env.get("AWUI_SSH_CONFIG", "default")}
+
+
 def detect_ui_backend(*, environ: dict[str, str] | None = None) -> str:
     """Prefer Qt when a local or X-forwarded display is available."""
     env = os.environ if environ is None else environ
@@ -109,11 +149,23 @@ def launch_argv(mode: str, session_file: str | Path) -> list[str] | None:
     return ["tmux", "new-window", *command] if mode == "tmux" else command
 
 
-def handoff_message(mode: str, session_file: str | Path, *, summary: str) -> str:
+def handoff_message(mode: str, session_file: str | Path, *, summary: str, remote: dict[str, Any] | None = None) -> str:
     """Render a concise user-facing handoff without launching a process."""
     if mode not in LAUNCH_MODES:
         raise ValueError("unknown launch mode")
     backend = detect_ui_backend()
+    if remote:
+        capabilities = remote.get("client_capabilities") or client_capabilities()
+        if capabilities.get("platform") == "windows" and capabilities.get("shell") == "powershell":
+            if not remote.get("ssh_host"):
+                raise ValueError("Windows remote handoff requires ssh_host")
+            command = powershell_ssh_handoff_command(
+                ssh_host=str(remote["ssh_host"]),
+                remote_session_file=remote.get("session_file", session_file),
+                remote_event_file=remote.get("event_file"),
+                backend=remote.get("backend", "gui"),
+            )
+            return f"HUMAN DECISION REQUIRED\n{summary}\nRun in Windows PowerShell (SSH config alias preserved):\n  {command}\nWaiting for Coordinator acceptance."
     executable = "awui-live" if backend == "gui" else "awtui-live"
     command = shlex.join([executable, "--session-file", str(session_file)])
     if mode == "manual":

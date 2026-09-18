@@ -10,6 +10,24 @@
     "kind": {"const": "coordinator-tui-request"},
     "project_id": {"type": "string", "minLength": 1},
     "session_id": {"type": "string", "minLength": 1},
+    "host_handoff": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ssh_host", "remote_session_file", "remote_event_file", "client_capabilities"],
+      "properties": {
+        "ssh_host": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+        "remote_session_file": {"type": "string", "minLength": 1},
+        "remote_event_file": {"type": "string", "minLength": 1},
+        "client_capabilities": {
+          "type": "object", "additionalProperties": false,
+          "required": ["platform", "shell"],
+          "properties": {
+            "platform": {"enum": ["windows", "linux", "macos", "freebsd"]},
+            "shell": {"enum": ["powershell", "cmd", "bash", "zsh", "sh"]},
+            "ssh_config": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
     "documents": {
       "type": "object", "additionalProperties": false,
       "properties": {

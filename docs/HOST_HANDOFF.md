@@ -32,3 +32,17 @@ disconnects, the user reruns the same attach command; stale revisions are
 rejected rather than silently applied. A clarification or incomplete batch
 leaves the worker waiting, while accepted independent points can be resumed
 individually.
+
+## Windows PowerShell through SSH
+
+SSH does not identify the operating system of the client. The Coordinator
+therefore carries explicit `client_capabilities` (`platform: windows`,
+`shell: powershell`) and an `ssh_host` alias from the user's host adapter. For
+that capability set, `handoff_message(..., remote=...)` prints one copyable
+PowerShell command that reads the private batch JSON with `ssh`, opens the
+local `awui-live` GUI (or `awtui-live` fallback), copies the revision-bound
+event JSON back with `scp`, and removes local temporary files.
+
+The alias is passed unchanged to OpenSSH, so the user's existing SSH config,
+ProxyJump, port, and identity settings are used. The remote event path is
+explicit and is never guessed from a local path.

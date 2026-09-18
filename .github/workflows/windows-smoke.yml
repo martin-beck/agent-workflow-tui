@@ -22,8 +22,15 @@ jobs:
           python-version: '3.12'
           cache: pip
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install . pytest
+      - run: python -m pip install '.[gui]' pytest
       # Keep this job provider-neutral: Windows has no POSIX PTY guarantee.
       # It validates backend selection, manual handoff, private session files,
       # bounded append-only journals, and the revision-bound bridge contract.
       - run: python -m pytest -q tests/test_host.py tests/test_ui_selection.py tests/test_bridge.py
+      - run: python tools/run_gui_screenshot.py
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-batch-screenshot-windows
+          path: artifacts/gui-batch.png

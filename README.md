@@ -11,8 +11,11 @@ The application is developed through the public coordination state repository
 umbrella project. It must never silently mutate an AR: every session starts
 from an immutable AR/revision envelope and emits typed, revision-bound output.
 
-Bootstrap status: contracts and AR topology are being established first; the
-interactive renderer and transport adapters are delivered by the queued ARs.
+The live renderer supports revision-bound batches of independent decisions in
+one session. It renders Coordinator-generated Design and Work plan Markdown,
+keeps each decision's source phrase highlighted while switching or scrolling,
+reflows to three stacked panes on narrow terminals, and offers proposal editing
+and Save + exit for a complete unsaved batch.
 
 ## Interaction boundary
 

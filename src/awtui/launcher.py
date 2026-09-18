@@ -27,13 +27,11 @@ def main() -> int:
         from .live import main as tui_main
         return int(tui_main(["--session-file", args.session_file] if args.session_file else []))
     if args.session_file:
-        from .awg import requests_to_tui
+        from .awg import envelope_requests_to_tui
         from .gui import build_gui_application
         from .host import attach_session
         request = attach_session(args.session_file)
-        batch = request.get("batch")
-        guidances = [entry.get("guidance_request", entry) for entry in batch] if isinstance(batch, list) else [request["guidance_request"]]
-        _context, decisions = requests_to_tui(guidances, project_id=request["project_id"], session_id=request["session_id"], documents=request.get("documents"))
+        _context, decisions = envelope_requests_to_tui(request, project_id=request["project_id"], session_id=request["session_id"], documents=request.get("documents"))
         window = build_gui_application(
             design_document=(request.get("documents") or {}).get("design", "# Design\n\nAwaiting context"),
             workplan=(request.get("documents") or {}).get("workplan", "# Work plan\n\nAwaiting context"),

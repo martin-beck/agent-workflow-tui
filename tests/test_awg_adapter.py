@@ -1,4 +1,4 @@
-from awtui.awg import request_digest, request_to_tui, tui_response_event
+from awtui.awg import envelope_requests_to_tui, request_digest, request_to_tui, tui_response_event
 from awtui.discussion import DecisionResponse
 
 
@@ -46,3 +46,18 @@ def test_tui_response_returns_candidate_identity_and_request_binding():
     assert event["payload"]["request_id"] == "AWG-EXAMPLE-001"
     assert event["payload"]["selected_candidate"] == "C-INCREMENTAL"
     assert event["event_type"] == "select"
+
+
+def test_envelope_keeps_top_level_decision_and_batch_decisions():
+    first = request()
+    second = {**request(), "request_id": "AWG-EXAMPLE-002", "context": {**request()["context"], "objective": "Choose the rollout target"}}
+    envelope = {"guidance_request": first, "batch": [{"guidance_request": second}]}
+    _context, decisions = envelope_requests_to_tui(envelope, project_id="demo", session_id="session-1")
+    assert [decision["request_id"] for decision in decisions] == ["AWG-EXAMPLE-001", "AWG-EXAMPLE-002"]
+
+
+def test_envelope_deduplicates_top_level_request_when_batch_repeats_it():
+    first = request()
+    envelope = {"guidance_request": first, "batch": [{"guidance_request": first}]}
+    _context, decisions = envelope_requests_to_tui(envelope, project_id="demo", session_id="session-1")
+    assert len(decisions) == 1

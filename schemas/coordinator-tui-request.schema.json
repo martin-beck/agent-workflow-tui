@@ -23,7 +23,8 @@
           "properties": {
             "platform": {"enum": ["windows", "linux", "macos", "freebsd"]},
             "shell": {"enum": ["powershell", "cmd", "bash", "zsh", "sh"]},
-            "ssh_config": {"type": "string", "minLength": 1}
+            "ssh_config": {"type": "string", "minLength": 1},
+            "gui_available": {"type": "boolean"}
           }
         }
       }

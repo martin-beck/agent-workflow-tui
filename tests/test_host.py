@@ -38,8 +38,19 @@ def test_mode_detection_is_deterministic_and_bounded():
 
 def test_windows_client_capabilities_are_explicit_not_inferred_from_ssh():
     assert client_capabilities(environ={"AWUI_CLIENT_PLATFORM": "windows", "AWUI_CLIENT_SHELL": "powershell"}) == {
-        "platform": "windows", "shell": "powershell", "ssh_config": "default"
+        "platform": "windows", "shell": "powershell", "ssh_config": "default", "gui_available": True
     }
+
+
+def test_windows_remote_handoff_falls_back_to_tui_without_gui_capability():
+    message = handoff_message(
+        "manual", "/remote/request.json", summary="2 decisions",
+        remote={"ssh_host": "build-box", "session_file": "/remote/request.json",
+                "event_file": "/remote/events.json", "client_capabilities":
+                {"platform": "windows", "shell": "powershell", "gui_available": False}},
+    )
+    assert "awtui-live --session-file" in message
+    assert "awui-live --session-file" not in message
 
 
 def test_powershell_ssh_round_trip_uses_config_alias_and_remote_result():

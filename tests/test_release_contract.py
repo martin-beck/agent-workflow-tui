@@ -16,4 +16,4 @@ def test_package_version_matches_current_release_line():
     pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
     version = re.search(r'^version = "([^"]+)"$', pyproject, re.MULTILINE)
     assert version is not None
-    assert version.group(1) == "0.4.3"
+    assert version.group(1) == "0.4.4"

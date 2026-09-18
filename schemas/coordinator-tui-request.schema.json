@@ -23,7 +23,8 @@
           "properties": {
             "platform": {"enum": ["windows", "linux", "macos", "freebsd"]},
             "shell": {"enum": ["powershell", "cmd", "bash", "zsh", "sh"]},
-            "ssh_config": {"type": "string", "minLength": 1}
+            "ssh_config": {"type": "string", "minLength": 1},
+            "gui_available": {"type": "boolean"}
           }
         }
       }
@@ -47,6 +48,7 @@
           "kind": {"const": "coordinator-tui-request"},
           "project_id": {"type": "string", "minLength": 1},
           "session_id": {"type": "string", "minLength": 1},
+          "host_handoff": {"$ref": "#/properties/host_handoff"},
           "documents": {"$ref": "#/properties/documents"},
           "ar": {"$ref": "#/properties/ar"},
           "interaction": {"$ref": "#/properties/interaction"},

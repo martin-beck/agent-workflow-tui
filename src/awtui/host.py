@@ -45,12 +45,27 @@ def powershell_ssh_handoff_command(
     )
 
 
-def client_capabilities(*, environ: dict[str, str] | None = None) -> dict[str, str]:
+def client_capabilities(*, environ: dict[str, str] | None = None) -> dict[str, str | bool]:
     """Return explicit client facts; SSH does not expose the client OS."""
     env = os.environ if environ is None else environ
-    platform = env.get("AWUI_CLIENT_PLATFORM", "windows" if env.get("OS") == "Windows_NT" else sys.platform)
-    shell = env.get("AWUI_CLIENT_SHELL", "powershell" if platform == "windows" else env.get("SHELL", "sh"))
-    return {"platform": platform, "shell": shell, "ssh_config": env.get("AWUI_SSH_CONFIG", "default")}
+    raw_platform = env.get("AWUI_CLIENT_PLATFORM", "windows" if env.get("OS") == "Windows_NT" else sys.platform)
+    platform = {"win32": "windows", "cygwin": "windows", "darwin": "macos"}.get(raw_platform, raw_platform)
+    raw_shell = env.get("AWUI_CLIENT_SHELL", "powershell" if platform == "windows" else env.get("SHELL", "sh"))
+    shell = Path(raw_shell).name.lower()
+    shell = {"powershell.exe": "powershell", "pwsh.exe": "powershell", "pwsh": "powershell",
+             "cmd.exe": "cmd", "bash.exe": "bash", "zsh.exe": "zsh", "sh.exe": "sh"}.get(shell, shell)
+    if shell not in {"powershell", "cmd", "bash", "zsh", "sh"}:
+        shell = "sh"
+    gui_value = env.get("AWUI_GUI_AVAILABLE")
+    gui_available = gui_value.lower() not in {"0", "false", "no", "off"} if gui_value is not None else bool(
+        env.get("DISPLAY") or env.get("WAYLAND_DISPLAY") or platform == "windows"
+    )
+    return {
+        "platform": platform,
+        "shell": shell,
+        "ssh_config": env.get("AWUI_SSH_CONFIG", "default"),
+        "gui_available": gui_available,
+    }
 
 
 def detect_ui_backend(*, environ: dict[str, str] | None = None) -> str:
@@ -159,11 +174,12 @@ def handoff_message(mode: str, session_file: str | Path, *, summary: str, remote
         if capabilities.get("platform") == "windows" and capabilities.get("shell") == "powershell":
             if not remote.get("ssh_host"):
                 raise ValueError("Windows remote handoff requires ssh_host")
+            backend = str(remote.get("backend") or ("gui" if capabilities.get("gui_available", True) else "tui"))
             command = powershell_ssh_handoff_command(
                 ssh_host=str(remote["ssh_host"]),
                 remote_session_file=remote.get("session_file", session_file),
                 remote_event_file=remote.get("event_file"),
-                backend=remote.get("backend", "gui"),
+                backend=backend,
             )
             return f"HUMAN DECISION REQUIRED\n{summary}\nRun in Windows PowerShell (SSH config alias preserved):\n  {command}\nWaiting for Coordinator acceptance."
     executable = "awui-live" if backend == "gui" else "awtui-live"

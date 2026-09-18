@@ -31,8 +31,9 @@ def main() -> int:
         from .gui import build_gui_application
         from .host import attach_session
         request = attach_session(args.session_file)
-        guidance = request["guidance_request"]
-        _context, decisions = requests_to_tui([guidance], project_id=request["project_id"], session_id=request["session_id"], documents=request.get("documents"))
+        batch = request.get("batch")
+        guidances = [entry.get("guidance_request", entry) for entry in batch] if isinstance(batch, list) else [request["guidance_request"]]
+        _context, decisions = requests_to_tui(guidances, project_id=request["project_id"], session_id=request["session_id"], documents=request.get("documents"))
         window = build_gui_application(
             design_document=(request.get("documents") or {}).get("design", "# Design\n\nAwaiting context"),
             workplan=(request.get("documents") or {}).get("workplan", "# Work plan\n\nAwaiting context"),

@@ -88,3 +88,13 @@ node/anchor whose text occurs in that node's document. The adapter fails closed
 on missing nodes, duplicate IDs, absent documents, or mismatched highlight text,
 then passes document-specific targets to the same renderer used by live
 sessions and scenario tests.
+
+## Host handoff and attach
+
+The host adapter writes the immutable request to a private, bounded JSON
+session file and selects `inline`, `tty`, `tmux`, or `manual` mode. Set
+`AWTUI_LAUNCH_MODE` to explicitly choose a mode; otherwise the adapter uses
+TTY and `TMUX` detection and falls back to manual handoff. The TUI-side
+adapter only validates and attaches the file: it does not invoke a shell or
+mutate AR state. Session IDs are safe filename components, files are limited
+to 2 MiB, and group/world-readable files are rejected.

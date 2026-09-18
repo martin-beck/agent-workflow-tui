@@ -2,10 +2,10 @@
   "schema_version": "1.0",
   "spec_id": "AWT-SPEC-COORDINATOR-TUI-BRIDGE",
   "version": 1,
-  "objective": "Make human-interaction authorization and AR persistence projection explicit and revision-bound.",
+  "objective": "Make human-interaction authorization, safe host attachment, and AR persistence projection explicit and revision-bound.",
   "ownership": {"coordinator": "AR identity, lifecycle, revision, and persistence", "guidance": "decision semantics and candidates", "tui": "rendering and human intent collection"},
   "states": ["pending", "in_progress", "resolved", "superseded"],
-  "invariants": ["A request has an explicit actionable Guidance trigger", "AR id and revision match Guidance context and every TUI response", "The TUI emits a persistence command and never edits AR files", "Clarification remains pending", "Selection, rejection, and reconciliation produce an explicit specification update and description append"],
+  "invariants": ["A request has an explicit actionable Guidance trigger", "AR id and revision match Guidance context and every TUI response", "A host attaches only a private bounded schema 1.0 session file", "The TUI emits a persistence command and never edits AR files", "Clarification remains pending", "Selection, rejection, and reconciliation produce an explicit specification update and description append"],
   "acceptance_predicates": ["Valid request validates against coordinator-tui-request schema 1.0", "Valid response validates against coordinator-tui-response schema 1.0", "Mismatched AR, revision, or request reference fails closed", "Response projection preserves candidate identity and user proposal"],
   "formalization": {"method": "contract plus finite state transition", "checker": "tests/test_bridge.py and schema validation in the owning Coordinator integration", "expected_result": "invariants-hold"}
 }

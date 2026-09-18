@@ -98,3 +98,16 @@ TTY and `TMUX` detection and falls back to manual handoff. The TUI-side
 adapter only validates and attaches the file: it does not invoke a shell or
 mutate AR state. Session IDs are safe filename components, files are limited
 to 2 MiB, and group/world-readable files are rejected.
+
+For local pipes or SSH forwarding, `awtui.transport_io` uses one UTF-8 JSON
+object terminated by a newline on stdin/stdout. Messages are bounded at 2 MiB,
+must be JSON objects, and are never passed through a shell. File transport uses
+an `fsync` plus atomic replace and rejects symlinks; this works on Windows as
+well as POSIX. The transport description is in
+`schemas/host-transport.schema.json`.
+
+`tools/awtui-live --session-file REQUEST.json` attaches a local request.
+`tools/awtui-live --input-json --output-json RESPONSE.json` accepts one
+stdin/SSH-piped request and atomically writes the latest revision-bound event
+to the designated response file. These input modes are mutually exclusive and
+neither invokes a shell.

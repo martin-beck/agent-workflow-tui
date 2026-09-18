@@ -24,10 +24,11 @@ def _qt():
 class DecisionWindow:
     """Qt window exposing the complete batched decision interaction."""
 
-    def __init__(self, interaction: LiveInteraction, *, title: str = "Agent Workflow") -> None:
+    def __init__(self, interaction: LiveInteraction, *, title: str = "Agent Workflow", on_event=None) -> None:
         QtCore, QtGui, QtWidgets = _qt()
         self.QtCore, self.QtGui, self.QtWidgets = QtCore, QtGui, QtWidgets
         self.interaction = interaction
+        self.on_event = on_event
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.window = QtWidgets.QMainWindow()
         self.window.setWindowTitle(title)
@@ -85,6 +86,10 @@ class DecisionWindow:
 
     def _respond(self, disposition: str) -> None:
         self.interaction.respond(disposition)
+        if self.on_event is not None:
+            self.on_event({"event_type": disposition, "point_id": self.interaction.point.point_id,
+                           "disposition": disposition,
+                           "selected": self.interaction.responses[self.interaction.point.point_id].selected})
         self._refresh()
 
     def _select(self) -> None:
@@ -173,12 +178,12 @@ class DecisionWindow:
         return self.app.exec()
 
 
-def build_gui_application(*, design_document: str = "# Design\n\nAwaiting AR context", workplan: str = "# Work plan\n\nAwaiting AR context", decisions: list[dict[str, Any]] | None = None) -> DecisionWindow:
+def build_gui_application(*, design_document: str = "# Design\n\nAwaiting AR context", workplan: str = "# Work plan\n\nAwaiting AR context", decisions: list[dict[str, Any]] | None = None, on_event=None) -> DecisionWindow:
     packet = _packet_from_decisions(decisions, design_document, workplan) if decisions else _default_packet("design", "Review the design")
     interaction = LiveInteraction(packet)
     # Keep source Markdown in the shared view-model for both renderers.
     interaction.packet_document = lambda mode: design_document if mode == "design" else workplan  # type: ignore[attr-defined]
-    return DecisionWindow(interaction)
+    return DecisionWindow(interaction, on_event=on_event)
 
 
 def main() -> int:

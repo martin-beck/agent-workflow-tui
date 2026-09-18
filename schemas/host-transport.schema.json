@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-workflow.dev/schemas/host-transport-1.0.json",
+  "title": "Agent Workflow host JSON transport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "encoding", "framing", "max_message_bytes", "directions"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "encoding": {"const": "utf-8"},
+    "framing": {"const": "single-json-object-with-newline"},
+    "max_message_bytes": {"const": 2097152},
+    "directions": {"type": "array", "items": {"enum": ["stdin", "stdout", "file"]}, "minItems": 1, "uniqueItems": true},
+    "atomic_file_replace": {"type": "boolean"},
+    "shell_free": {"const": true}
+  }
+}

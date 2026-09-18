@@ -13,6 +13,14 @@ def detect_ui_backend(*, environ: dict[str, str] | None = None) -> str:
     return "tui"
 
 
+def backend_for_invocation(program: str, *, environ: dict[str, str] | None = None) -> str:
+    """Honor explicit GUI/TUI entry points before display auto-detection."""
+    from pathlib import Path
+    if Path(program).stem.lower() in {"awui-live", "awui_live"}:
+        return "gui"
+    return detect_ui_backend(environ=environ)
+
+
 def command_for_environment(*, environ: dict[str, str] | None = None, session_file: str | None = None) -> list[str]:
     command = "awui-live" if detect_ui_backend(environ=environ) == "gui" else "awtui-live"
     return [command, "--session-file", session_file] if session_file else [command]
@@ -28,7 +36,10 @@ def main() -> int:
     args = parser.parse_args()
     if args.session_file and args.input_json:
         parser.error("--session-file and --input-json are mutually exclusive")
-    if detect_ui_backend() == "tui":
+    # The console entry point is an explicit user choice.  This matters on
+    # Windows, where a GUI has no DISPLAY/WAYLAND_DISPLAY environment.
+    backend = backend_for_invocation(sys.argv[0])
+    if backend == "tui":
         from .live import main as tui_main
         argv = []
         if args.session_file:

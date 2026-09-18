@@ -14,13 +14,16 @@ The manual fallback is deliberately explicit:
 ```text
 HUMAN DECISION REQUIRED
 Run in a user-controlled terminal:
-  awtui-live --session-file /protected/path/awtui-SESSION.json
+  awui-live --session-file /protected/path/awui-SESSION.json
 ```
 
 The request file is private (`0600`), bounded, and contains the AR id,
 revision, request reference, decision packet, and Markdown design/work-plan
 documents. It must not contain credentials, raw host prompts, or private
-transcripts. Start the TUI with `--session-file` to validate and render it.
+transcripts. Start `awui-live --session-file` to select the Qt GUI whenever
+`DISPLAY`/`WAYLAND_DISPLAY` is available (including SSH X forwarding). In a
+headless environment it automatically runs the full TUI; `awtui-live` remains
+the explicit terminal-only command.
 
 Submitting a choice produces revision-bound TUI events in the private sibling
 `*.events.jsonl` journal. The Coordinator/agent host consumes that journal and

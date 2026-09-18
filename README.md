@@ -1,13 +1,17 @@
-# Agent Workflow TUI
+# Agent Workflow UI
 
-Agent Workflow TUI is the interactive terminal application for human-oracle
-discussion, decision selection, and post-discussion conflict reconciliation.
+Agent Workflow UI is the interactive Linux desktop and terminal application
+for human-oracle discussion, decision selection, and post-discussion conflict
+reconciliation. `awui-live` selects the premium Qt desktop renderer whenever a
+local or X-forwarded display is available and falls back to the full
+prompt-toolkit TUI in headless/SSH environments. `awtui-live` remains
+available as an explicit TUI compatibility command.
 It is a downstream client: Agent Workflow Guidance owns decision semantics,
 Agent Workflow Coordinator owns AR identity/revisions/events, and Agent
 Workflow Quality owns quality and evidence policy.
 
 The application is developed through the public coordination state repository
-`martin-beck/agent-workflow-tui-state` and routed by the Agent Workflow
+`martin-beck/agent-workflow-ui-state` and routed by the Agent Workflow
 umbrella project. It must never silently mutate an AR: every session starts
 from an immutable AR/revision envelope and emits typed, revision-bound output.
 

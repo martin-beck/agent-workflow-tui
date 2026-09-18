@@ -13,6 +13,15 @@ LAUNCH_MODES = {"inline", "tty", "tmux", "manual"}
 MAX_SESSION_BYTES = 2 * 1024 * 1024
 
 
+def detect_ui_backend(*, environ: dict[str, str] | None = None) -> str:
+    """Prefer Qt when a local or X-forwarded display is available."""
+    env = os.environ if environ is None else environ
+    requested = env.get("AWUI_BACKEND", "").lower()
+    if requested in {"gui", "tui"}:
+        return requested
+    return "gui" if env.get("DISPLAY") or env.get("WAYLAND_DISPLAY") else "tui"
+
+
 def detect_launch_mode(*, environ: dict[str, str] | None = None, stdin_tty: bool | None = None, stdout_tty: bool | None = None) -> str:
     """Select a host mode without executing host commands."""
     env = os.environ if environ is None else environ
@@ -93,7 +102,7 @@ def launch_argv(mode: str, session_file: str | Path) -> list[str] | None:
         raise ValueError("unknown launch mode")
     if mode == "manual":
         return None
-    command = ["awtui-live", "--session-file", str(session_file)]
+    command = ["awui-live" if detect_ui_backend() == "gui" else "awtui-live", "--session-file", str(session_file)]
     return ["tmux", "new-window", *command] if mode == "tmux" else command
 
 
@@ -101,11 +110,13 @@ def handoff_message(mode: str, session_file: str | Path, *, summary: str) -> str
     """Render a concise user-facing handoff without launching a process."""
     if mode not in LAUNCH_MODES:
         raise ValueError("unknown launch mode")
-    command = shlex.join(["awtui-live", "--session-file", str(session_file)])
+    backend = detect_ui_backend()
+    executable = "awui-live" if backend == "gui" else "awtui-live"
+    command = shlex.join([executable, "--session-file", str(session_file)])
     if mode == "manual":
-        action = f"Run in a user-controlled terminal:\n  {command}"
+        action = f"Run in a user-controlled terminal ({backend}):\n  {command}"
     elif mode == "tmux":
         action = f"Open a configured tmux window with:\n  {shlex.join(launch_argv(mode, session_file) or [])}"
     else:
-        action = "The configured terminal host can launch the TUI in the current session."
+        action = f"The configured host can launch the {backend.upper()} in the current session."
     return f"HUMAN DECISION REQUIRED\n{summary}\n{action}\nWaiting for Coordinator acceptance."

@@ -1,0 +1,29 @@
+name: TUI Windows compatibility
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tui-windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-and-contract-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install . pytest
+      # Keep this job provider-neutral: Windows has no POSIX PTY guarantee.
+      # It validates backend selection, manual handoff, private session files,
+      # bounded append-only journals, and the revision-bound bridge contract.
+      - run: python -m pytest -q tests/test_host.py tests/test_ui_selection.py tests/test_bridge.py

@@ -48,3 +48,7 @@ GUI-preferred default for backwards-compatible clients.
 The alias is passed unchanged to OpenSSH, so the user's existing SSH config,
 ProxyJump, port, and identity settings are used. The remote event path is
 explicit and is never guessed from a local path.
+
+The reproducible transport qualification is documented in
+[`REMOTE_ROUNDTRIP.md`](REMOTE_ROUNDTRIP.md); it covers the actual SSH copy and
+Coordinator response projection without claiming an external user's machine.

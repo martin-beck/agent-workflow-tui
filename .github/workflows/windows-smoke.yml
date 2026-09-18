@@ -26,7 +26,7 @@ jobs:
       # Keep this job provider-neutral: Windows has no POSIX PTY guarantee.
       # It validates backend selection, manual handoff, private session files,
       # bounded append-only journals, and the revision-bound bridge contract.
-      - run: python -m pytest -q tests/test_host.py tests/test_ui_selection.py tests/test_bridge.py
+      - run: python -m pytest -q tests/test_host.py tests/test_ui_selection.py tests/test_bridge.py tests/test_ssh_roundtrip.py
       - run: python tools/run_gui_screenshot.py
         env:
           QT_QPA_PLATFORM: offscreen

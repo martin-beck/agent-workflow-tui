@@ -68,7 +68,10 @@ def attach_session(path: str | Path) -> dict[str, Any]:
     data = candidate.read_bytes()
     if len(data) > MAX_SESSION_BYTES:
         raise ValueError("session file exceeds bounded size")
-    if stat.S_IMODE(candidate.stat().st_mode) & 0o077:
+    # POSIX exposes mode bits; Windows uses ACLs and reports synthetic mode
+    # bits that do not describe the effective DACL.  The creator's Windows
+    # profile/ACL is therefore the authority there.
+    if os.name != "nt" and stat.S_IMODE(candidate.stat().st_mode) & 0o077:
         raise ValueError("session file must not be group/world accessible")
     value = json.loads(data.decode("utf-8"))
     if value.get("kind") != "coordinator-tui-request" or value.get("schema_version") != "1.0":
@@ -92,7 +95,7 @@ def append_event(path: str | Path, event: dict[str, Any]) -> None:
             stream.flush()
             os.fsync(stream.fileno())
     finally:
-        if target.exists() and stat.S_IMODE(target.stat().st_mode) & 0o077:
+        if os.name != "nt" and target.exists() and stat.S_IMODE(target.stat().st_mode) & 0o077:
             target.chmod(0o600)
 
 

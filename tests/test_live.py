@@ -1,4 +1,5 @@
 from awtui.live import build_application
+from awtui.discussion import Proposal
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -217,6 +218,18 @@ def test_arrow_navigation_reopens_answered_decision_before_replacement():
     state.respond("select")
     assert "✅ answered" in app.awtui_panes[1].text
     assert "B" in app.awtui_panes[1].text and "A" not in app.awtui_panes[1].text
+
+
+def test_user_proposal_can_be_reedited_before_final_selection():
+    app = build_application(
+        decisions=[{"point_id": "p", "anchor": "design:L1", "question": "Choose", "proposals": [{"label": "A"}, {"label": "B"}]}]
+    )
+    state = app.awtui_state
+    state.add_proposal(Proposal("User: First", "Initial rationale", .7, "Initial tradeoff"))
+    assert state.begin_edit_proposal() is True
+    state.add_proposal(Proposal("User: Revised", "Updated rationale", .9, "Updated tradeoff"))
+    assert any(proposal.label == "User: Revised" for proposal in state.point.proposals)
+    assert not any(proposal.label == "User: First" for proposal in state.point.proposals)
 
 
 def test_plan_anchor_follows_workplan_document_on_decision_change():

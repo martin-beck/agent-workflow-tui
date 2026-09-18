@@ -48,8 +48,12 @@ def powershell_ssh_handoff_command(
 def client_capabilities(*, environ: dict[str, str] | None = None) -> dict[str, str | bool]:
     """Return explicit client facts; SSH does not expose the client OS."""
     env = os.environ if environ is None else environ
-    platform = env.get("AWUI_CLIENT_PLATFORM", "windows" if env.get("OS") == "Windows_NT" else sys.platform)
-    shell = env.get("AWUI_CLIENT_SHELL", "powershell" if platform == "windows" else env.get("SHELL", "sh"))
+    raw_platform = env.get("AWUI_CLIENT_PLATFORM", "windows" if env.get("OS") == "Windows_NT" else sys.platform)
+    platform = {"win32": "windows", "cygwin": "windows", "darwin": "macos"}.get(raw_platform, raw_platform)
+    raw_shell = env.get("AWUI_CLIENT_SHELL", "powershell" if platform == "windows" else env.get("SHELL", "sh"))
+    shell = Path(raw_shell).name.lower()
+    if shell not in {"powershell", "cmd", "bash", "zsh", "sh"}:
+        shell = "sh"
     gui_value = env.get("AWUI_GUI_AVAILABLE")
     gui_available = gui_value.lower() not in {"0", "false", "no", "off"} if gui_value is not None else bool(
         env.get("DISPLAY") or env.get("WAYLAND_DISPLAY") or platform == "windows"

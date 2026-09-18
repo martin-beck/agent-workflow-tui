@@ -42,6 +42,12 @@ def test_windows_client_capabilities_are_explicit_not_inferred_from_ssh():
     }
 
 
+def test_capabilities_normalize_platform_and_shell_for_bridge_schema():
+    assert client_capabilities(environ={"AWUI_CLIENT_PLATFORM": "darwin", "AWUI_CLIENT_SHELL": "/bin/zsh"}) == {
+        "platform": "macos", "shell": "zsh", "ssh_config": "default", "gui_available": False
+    }
+
+
 def test_windows_remote_handoff_falls_back_to_tui_without_gui_capability():
     message = handoff_message(
         "manual", "/remote/request.json", summary="2 decisions",

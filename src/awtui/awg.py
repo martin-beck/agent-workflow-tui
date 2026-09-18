@@ -82,6 +82,43 @@ def requests_to_tui(
     return first, points
 
 
+def envelope_requests_to_tui(
+    envelope: dict[str, Any], *, project_id: str, session_id: str,
+    documents: dict[str, str] | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Project every distinct request in a Coordinator envelope.
+
+    A batch envelope historically duplicated the first request at top level
+    while putting the remaining requests in ``batch``. Replacing the top
+    level with ``batch`` silently dropped that first decision. Normalize by
+    request ID, preserving order and avoiding duplicates.
+    """
+    candidates: list[dict[str, Any]] = []
+    top = envelope.get("guidance_request")
+    if isinstance(top, dict):
+        candidates.append(top)
+    batch = envelope.get("batch", [])
+    if not isinstance(batch, list):
+        raise ValueError("Coordinator batch must be an array")
+    candidates.extend(
+        entry.get("guidance_request", entry)
+        for entry in batch
+        if isinstance(entry, dict)
+    )
+    unique: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for request in candidates:
+        request_id = request.get("request_id")
+        if not isinstance(request_id, str) or not request_id:
+            raise ValueError("every batch decision requires guidance_request.request_id")
+        if request_id not in seen:
+            seen.add(request_id)
+            unique.append(request)
+    if not unique:
+        raise ValueError("Coordinator envelope contains no decision requests")
+    return requests_to_tui(unique, project_id=project_id, session_id=session_id, documents=documents or envelope.get("documents"))
+
+
 def tui_response_event(request: dict[str, Any], response: DecisionResponse, *, project_id: str, session_id: str, sequence: int) -> dict[str, Any]:
     """Project a TUI response into the canonical AWG event payload."""
     candidates = {candidate["action"]: candidate["candidate_id"] for candidate in request.get("candidates", [])}

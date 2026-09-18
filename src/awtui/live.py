@@ -640,10 +640,9 @@ def build_application_from_context(context: dict, *, decisions=None, on_event=No
 
 def build_application_from_awg_request(request: dict, *, project_id: str, session_id: str, documents: dict[str, str] | None = None, on_event=None, record_event=None) -> Application:
     """Build the live TUI directly from Guidance's decision-request schema."""
-    from .awg import request_to_tui
+    from .awg import envelope_requests_to_tui, request_to_tui
     if isinstance(request.get("batch"), list):
-        from .awg import requests_to_tui
-        context, decisions = requests_to_tui(request["batch"], project_id=project_id, session_id=session_id, documents=documents or request.get("documents"))
+        context, decisions = envelope_requests_to_tui(request, project_id=project_id, session_id=session_id, documents=documents or request.get("documents"))
     else:
         context, decisions = request_to_tui(request, project_id=project_id, session_id=session_id, documents=documents)
     application = build_application_from_context(context, decisions=decisions, on_event=on_event, record_event=record_event)

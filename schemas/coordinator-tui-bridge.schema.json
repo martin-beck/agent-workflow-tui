@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/martin-beck/agent-workflow-tui/schemas/coordinator-tui-bridge.schema.json",
+  "$id": "https://github.com/martin-beck/agent-workflow-ui/schemas/coordinator-tui-bridge.schema.json",
   "title": "Coordinator/TUI interaction bridge",
   "type": "object",
   "additionalProperties": false,

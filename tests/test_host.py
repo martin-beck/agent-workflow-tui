@@ -45,9 +45,10 @@ def test_session_file_is_not_overwritten_or_attached_if_public(tmp_path):
     path = write_session_file(request(), tmp_path)
     with pytest.raises(FileExistsError):
         write_session_file(request(), tmp_path)
-    path.chmod(0o644)
-    with pytest.raises(ValueError, match="accessible"):
-        attach_session(path)
+    if os.name != "nt":
+        path.chmod(0o644)
+        with pytest.raises(ValueError, match="accessible"):
+            attach_session(path)
 
 
 def test_unsafe_request_is_rejected(tmp_path):

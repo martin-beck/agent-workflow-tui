@@ -9,6 +9,8 @@ from awtui.host import (
     handoff_message,
     launch_argv,
     write_session_file,
+    client_capabilities,
+    powershell_ssh_handoff_command,
 )
 
 
@@ -32,6 +34,37 @@ def test_mode_detection_is_deterministic_and_bounded():
     assert "awtui-live --session-file /tmp/x" in handoff_message(
         "manual", "/tmp/x", summary="2 decisions"
     )
+
+
+def test_windows_client_capabilities_are_explicit_not_inferred_from_ssh():
+    assert client_capabilities(environ={"AWUI_CLIENT_PLATFORM": "windows", "AWUI_CLIENT_SHELL": "powershell"}) == {
+        "platform": "windows", "shell": "powershell", "ssh_config": "default"
+    }
+
+
+def test_powershell_ssh_round_trip_uses_config_alias_and_remote_result():
+    command = powershell_ssh_handoff_command(
+        ssh_host="project-prod",
+        remote_session_file="/srv/state/.runtime/request.json",
+        remote_event_file="/srv/state/.runtime/response.json",
+    )
+    assert "ssh project-prod" in command
+    assert "awui-live --session-file" in command
+    assert "scp \"$env:TEMP\\awui-events.json\" project-prod:'/srv/state/.runtime/response.json'" in command
+    with pytest.raises(ValueError):
+        powershell_ssh_handoff_command(ssh_host="bad;host", remote_session_file="/tmp/x")
+
+
+def test_handoff_message_prints_windows_round_trip_command():
+    message = handoff_message(
+        "manual", "/remote/request.json", summary="2 decisions",
+        remote={"ssh_host": "build-box", "session_file": "/remote/request.json",
+                "event_file": "/remote/events.json", "client_capabilities":
+                {"platform": "windows", "shell": "powershell"}},
+    )
+    assert "Windows PowerShell" in message
+    assert "ssh build-box" in message
+    assert "scp" in message
 
 
 def test_private_session_file_can_be_attached(tmp_path):

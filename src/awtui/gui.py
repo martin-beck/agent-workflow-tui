@@ -125,6 +125,19 @@ class DecisionWindow:
     def _refresh_helper(self) -> None:
         self.helper.setPlainText(self.interaction.render_helper())
 
+    def _highlight_document(self, widget: Any, phrase: str) -> None:
+        cursor = widget.document().find(phrase)
+        selections = []
+        if not cursor.isNull():
+            selection = self.QtWidgets.QTextEdit.ExtraSelection()
+            selection.cursor = cursor
+            selection.format.setBackground(self.QtGui.QColor("#d6a84f"))
+            selection.format.setForeground(self.QtGui.QColor("#111722"))
+            selections.append(selection)
+            widget.setTextCursor(cursor)
+            widget.ensureCursorVisible()
+        widget.setExtraSelections(selections)
+
     def _refresh(self) -> None:
         self.points.blockSignals(True); self.points.clear()
         for point in self.interaction.packet.points:
@@ -138,8 +151,12 @@ class DecisionWindow:
         visible = [self.interaction.proposal] if response and response.selected else list(point.proposals)
         for proposal in visible: self.proposals.addItem(proposal.label)
         self.proposals.setCurrentRow(min(self.interaction.proposal_index, max(0, len(visible) - 1))); self.proposals.blockSignals(False)
-        self.design.setMarkdown(self.interaction.packet_document("design") if hasattr(self.interaction, "packet_document") else "")
-        self.workplan.setMarkdown(self.interaction.packet_document("workplan") if hasattr(self.interaction, "packet_document") else "")
+        design_document = self.interaction.packet_document("design") if hasattr(self.interaction, "packet_document") else ""
+        workplan_document = self.interaction.packet_document("workplan") if hasattr(self.interaction, "packet_document") else ""
+        self.design.setMarkdown(design_document)
+        self.workplan.setMarkdown(workplan_document)
+        self._highlight_document(self.design, self.interaction.point.document_highlights.get("design", self.interaction.point.highlight or self.interaction.point.question))
+        self._highlight_document(self.workplan, self.interaction.point.document_highlights.get("workplan", self.interaction.point.highlight or self.interaction.point.question))
         self.status.setText(f"Decision {self.interaction.point_index + 1}/{len(self.interaction.packet.points)}  |  {'saved' if self.interaction.saved else 'unsaved'}  |  selected {sum(r.disposition == 'select' for r in self.interaction.responses.values())}/{len(self.interaction.packet.points)}")
         self._refresh_helper()
 

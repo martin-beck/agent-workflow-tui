@@ -7,7 +7,8 @@ from prompt_toolkit.application import Application
 from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
-from prompt_toolkit.layout import ConditionalContainer, Dimension, HSplit, Layout, VSplit
+from prompt_toolkit.layout import ConditionalContainer, Dimension, HSplit, Layout, VSplit, DynamicContainer
+from prompt_toolkit.application.current import get_app
 from prompt_toolkit.filters import Condition
 from prompt_toolkit.layout.processors import Processor, Transformation
 from prompt_toolkit.widgets import Frame, TextArea
@@ -77,6 +78,7 @@ class LiveInteraction:
         self.saved = False
         self.exit_confirm = False
         self.exit_confirm_index = 0
+        self.editing_proposal_index: int | None = None
     @property
     def point(self): return self.packet.points[self.point_index]
     @property
@@ -96,9 +98,18 @@ class LiveInteraction:
             del self.responses[self.point.point_id]
         self.proposal_index = max(0, min(len(self.point.proposals)-1, self.proposal_index + delta))
     def add_proposal(self, proposal: Proposal):
-        point = replace(self.point, proposals=self.point.proposals + (proposal,))
+        proposals = list(self.point.proposals)
+        if self.editing_proposal_index is not None:
+            proposals[self.editing_proposal_index] = proposal
+        else:
+            proposals.append(proposal)
+        point = replace(self.point, proposals=tuple(proposals))
         self.packet = replace(self.packet, points=self.packet.points[:self.point_index] + (point,) + self.packet.points[self.point_index+1:])
+        self.responses.pop(self.point.point_id, None)
         self.proposal_index = len(point.proposals)-1
+        if self.editing_proposal_index is not None:
+            self.proposal_index = self.editing_proposal_index
+            self.editing_proposal_index = None
         self.saved = False
         self._refresh_callback()
     def respond(self, disposition: str) -> DecisionResponse:
@@ -170,6 +181,13 @@ class LiveInteraction:
 
     def _refresh_callback(self):
         if hasattr(self, "_refresh"): self._refresh()
+
+    def begin_edit_proposal(self) -> bool:
+        """Load the current user proposal into the four-field editor."""
+        if not self.proposal.label.startswith("User: "):
+            return False
+        self.editing_proposal_index = self.proposal_index
+        return True
 
 def _default_packet(document: str, points: str) -> DiscussionPacket:
     p = Proposal("Review in context", "Inspect the highlighted material", .7, "Requires human review")
@@ -246,7 +264,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         confirmation_view,
         filter=Condition(lambda: interaction.input_mode and interaction.proposal_confirm),
     )
-    footer = TextArea(text="↑/↓: decision  ←/→: proposal  tab/w/d: workplan/design  page-up/page-down: scroll document  enter: select  r: reject  c: clarify  m: evidence  a: add proposal  s: save  o: reopen  q: quit", read_only=True, height=1, style="class:footer")
+    footer = TextArea(text="↑/↓: decision  ←/→: proposal  tab/w/d: workplan/design  page-up/page-down: scroll document  enter: select  r: reject  c: clarify  m: evidence  a: add  e: edit own  s: save  o: reopen  q: quit", read_only=True, height=1, style="class:footer")
     bindings = KeyBindings()
     def refresh():
         for field in editor_fields:
@@ -268,7 +286,8 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             helper_view.text = interaction.render_helper() if packet else helper
         if interaction.exit_confirm:
             requirements = interaction.exit_requirements()
-            options = ("No, stay", "Yes, exit")
+            complete_unsaved = not interaction.exit_requirements()[:-1] and not interaction.saved
+            options = ("No, stay", "Save + exit" if complete_unsaved else "Yes, exit")
             choices = "    ".join(("▶ " if i == interaction.exit_confirm_index else "  ") + value for i, value in enumerate(options))
             helper_view.text = "Work remains:\n- " + "\n- ".join(requirements) + f"\n\nExit the TUI anyway?\n{choices}\nUse ←/→/↑/↓, then Enter."
         document = workplan if interaction.document_mode == "workplan" else design_document
@@ -325,7 +344,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             payload = {"point_id": interaction.point.point_id}
             if response is not None:
                 payload.update({"disposition": response.disposition, "selected": response.selected})
-                request_id = getattr(interaction, "request_id", None)
+                request_id = getattr(interaction, "point_request_ids", {}).get(interaction.point.point_id, getattr(interaction, "request_id", None))
                 if request_id:
                     payload["request_id"] = request_id
                 candidate_id = getattr(interaction, "candidate_ids", {}).get(interaction.point.point_id, {}).get(response.selected)
@@ -458,7 +477,10 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     @bindings.add("enter")
     def enter(event):
         if interaction.exit_confirm:
-            if interaction.exit_confirm_index == 1:
+            if interaction.exit_confirm_index == 1 and not interaction.exit_requirements()[:-1] and not interaction.saved:
+                emit(event, "safe-exit")
+                event.app.exit(result=0)
+            elif interaction.exit_confirm_index == 1:
                 event.app.exit(result=0)
             else:
                 interaction.exit_confirm = False
@@ -510,6 +532,25 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
             event.app.current_buffer.insert_text("a")
             return
         interaction.input_mode = True
+        interaction.editing_proposal_index = None
+        interaction.proposal_confirm = False
+        interaction.proposal_edit_index = 0
+        event.app.layout.focus(editor_fields[0])
+        refresh()
+
+    @bindings.add("e")
+    def edit(event):
+        if interaction.input_mode:
+            event.app.current_buffer.insert_text("e")
+            return
+        if not interaction.begin_edit_proposal():
+            helper_view.text = "Select a user proposal (✎) before editing it."
+            return
+        proposal = interaction.proposal
+        fields = (proposal.label.removeprefix("User: "), proposal.rationale, str(proposal.confidence), proposal.tradeoffs)
+        for field, value in zip(editor_fields, fields):
+            field.text = value
+        interaction.input_mode = True
         interaction.proposal_confirm = False
         interaction.proposal_edit_index = 0
         event.app.layout.focus(editor_fields[0])
@@ -522,25 +563,30 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
     # narrow terminals degrade as a whole instead of allowing one pane to
     # consume all available space.
     pane_width = Dimension(min=28, max=120, weight=1)
-    document_row_height = Dimension(min=8, max=40, weight=3)
+    narrow_pane_width = Dimension(min=1, max=120, weight=1)
+    document_row_height = Dimension(min=8, max=40, preferred=8, weight=3)
+    actual_document_row_height = Dimension(min=8, max=80, weight=4)
     helper_height = Dimension(min=6, max=12, preferred=9, weight=1)
-    document_row = VSplit(
+    document_frame = Frame(document_view, title="Design / Workplan", width=pane_width, style="class:document-pane")
+    points_frame = Frame(points_view, title="Decisions and proposals", width=pane_width, style="class:decision-pane")
+    helper_frame = Frame(helper_view, title="Helper: rationale, implications, evidence", style="class:helper-pane", width=Dimension(weight=1), height=helper_height)
+    horizontal_documents = VSplit([document_frame, points_frame], padding=0, width=Dimension(weight=1), height=actual_document_row_height)
+    vertical_documents = HSplit(
         [
-            Frame(document_view, title="Design / Workplan", width=pane_width, style="class:document-pane"),
-            Frame(points_view, title="Decisions and proposals", width=pane_width, style="class:decision-pane"),
-        ],
-        padding=1,
-        width=Dimension(weight=1),
-        height=document_row_height,
+            Frame(document_view, title="Design / Workplan", width=narrow_pane_width, style="class:document-pane"),
+            Frame(points_view, title="Decisions and proposals", width=narrow_pane_width, style="class:decision-pane"),
+        ], padding=0, width=Dimension(weight=1), height=actual_document_row_height
     )
-    helper_frame = Frame(
-        helper_view,
-        title="Helper: rationale, implications, evidence", style="class:helper-pane",
-        width=Dimension(weight=1),
-        height=helper_height,
+    responsive_documents = DynamicContainer(
+        lambda: vertical_documents if get_app().output.get_size().columns < 100 else horizontal_documents
     )
+    # Preserve the public geometry inspection surface while DynamicContainer
+    # chooses the narrow-terminal arrangement at render time.
+    responsive_documents.width = Dimension(weight=1)
+    responsive_documents.height = document_row_height
+    responsive_documents.children = horizontal_documents.children
     body = HSplit(
-        [document_row, helper_frame, editor_form, confirmation, footer],
+        [responsive_documents, helper_frame, editor_form, confirmation, footer],
         width=Dimension(weight=1),
         height=Dimension(weight=1),
     )
@@ -565,6 +611,7 @@ def build_application(*, document: str = "Awaiting AR context", points: str = "N
         "pane_width": pane_width,
         "helper": helper_height,
     }
+    application.awtui_responsive_documents = responsive_documents
     application.editor = editor
     application.editor_fields = tuple(editor_fields)
     application.confirmation_view = confirmation_view
@@ -594,8 +641,14 @@ def build_application_from_context(context: dict, *, decisions=None, on_event=No
 def build_application_from_awg_request(request: dict, *, project_id: str, session_id: str, documents: dict[str, str] | None = None, on_event=None, record_event=None) -> Application:
     """Build the live TUI directly from Guidance's decision-request schema."""
     from .awg import request_to_tui
-    context, decisions = request_to_tui(request, project_id=project_id, session_id=session_id, documents=documents)
-    return build_application_from_context(context, decisions=decisions, on_event=on_event, record_event=record_event)
+    if isinstance(request.get("batch"), list):
+        from .awg import requests_to_tui
+        context, decisions = requests_to_tui(request["batch"], project_id=project_id, session_id=session_id, documents=documents or request.get("documents"))
+    else:
+        context, decisions = request_to_tui(request, project_id=project_id, session_id=session_id, documents=documents)
+    application = build_application_from_context(context, decisions=decisions, on_event=on_event, record_event=record_event)
+    application.interaction.point_request_ids = {item["point_id"]: item.get("request_id", context.get("request_id")) for item in decisions}
+    return application
 
 
 def build_application_from_structure_graph(graph: dict, *, project_id: str, session_id: str, on_event=None, record_event=None) -> Application:

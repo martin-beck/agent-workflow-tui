@@ -60,6 +60,28 @@ def request_to_tui(request: dict[str, Any], *, project_id: str, session_id: str,
     return context, decisions
 
 
+def requests_to_tui(
+    requests: list[dict[str, Any]], *, project_id: str, session_id: str,
+    documents: dict[str, str] | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Project a complete Coordinator batch into one revision-bound packet."""
+    if not requests:
+        raise ValueError("a TUI batch requires at least one AWG request")
+    contexts: list[dict[str, Any]] = []
+    points: list[dict[str, Any]] = []
+    for request in requests:
+        request = request.get("guidance_request", request)
+        context, mapped = request_to_tui(request, project_id=project_id, session_id=session_id, documents=documents)
+        contexts.append(context)
+        for point in mapped:
+            point["request_id"] = request["request_id"]
+            points.append(point)
+    first = contexts[0]
+    first["batch_request_ids"] = [context["request_id"] for context in contexts]
+    first["batch_ar_ids"] = [context["ar_id"] for context in contexts]
+    return first, points
+
+
 def tui_response_event(request: dict[str, Any], response: DecisionResponse, *, project_id: str, session_id: str, sequence: int) -> dict[str, Any]:
     """Project a TUI response into the canonical AWG event payload."""
     candidates = {candidate["action"]: candidate["candidate_id"] for candidate in request.get("candidates", [])}

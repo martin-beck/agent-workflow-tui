@@ -52,6 +52,8 @@ def client_capabilities(*, environ: dict[str, str] | None = None) -> dict[str, s
     platform = {"win32": "windows", "cygwin": "windows", "darwin": "macos"}.get(raw_platform, raw_platform)
     raw_shell = env.get("AWUI_CLIENT_SHELL", "powershell" if platform == "windows" else env.get("SHELL", "sh"))
     shell = Path(raw_shell).name.lower()
+    shell = {"powershell.exe": "powershell", "pwsh.exe": "powershell", "pwsh": "powershell",
+             "cmd.exe": "cmd", "bash.exe": "bash", "zsh.exe": "zsh", "sh.exe": "sh"}.get(shell, shell)
     if shell not in {"powershell", "cmd", "bash", "zsh", "sh"}:
         shell = "sh"
     gui_value = env.get("AWUI_GUI_AVAILABLE")

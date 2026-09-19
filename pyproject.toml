@@ -18,6 +18,7 @@ capture = ["asciinema==2.4.0"]
 [project.scripts]
 awui-live = "awtui.launcher:main"
 awtui-live = "awtui.live:main"
+awui-connect = "awtui.connect:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "."]

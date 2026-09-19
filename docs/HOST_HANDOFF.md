@@ -39,11 +39,16 @@ SSH does not identify the operating system of the client. The Coordinator
 therefore carries explicit `client_capabilities` (`platform: windows`,
 `shell: powershell`, and optional `gui_available`) and an `ssh_host` alias from
 the user's host adapter. For that capability set, `handoff_message(...,
-remote=...)` prints one copyable PowerShell command that reads the private batch
-JSON with `ssh`, opens the local `awui-live` GUI when `gui_available` is true
-(otherwise `awtui-live`), copies the revision-bound event JSON back with `scp`,
-and removes local temporary files. A missing `gui_available` preserves the
+remote=...)` prints one copyable PowerShell `awui-connect` command that reads the
+private batch JSON with `ssh`, opens the local `awui-live` GUI when
+`gui_available` is true (otherwise `awtui-live`), copies the revision-bound
+event JSON back with `scp`, and removes local temporary files. A missing `gui_available` preserves the
 GUI-preferred default for backwards-compatible clients.
+
+The same short command works from Linux and macOS. It detects the local display
+and architecture, supports `--backend tui` for an explicit terminal fallback,
+and uses a temporary runtime directory for the request and response. See
+[`GUI_UX.md`](GUI_UX.md) for the complete handoff and reconciliation contract.
 
 The alias is passed unchanged to OpenSSH, so the user's existing SSH config,
 ProxyJump, port, and identity settings are used. The remote event path is

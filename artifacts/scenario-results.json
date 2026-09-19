@@ -5,6 +5,7 @@
       "events": [
         "select"
       ],
+      "gui_screenshot": "docs/gui-screenshots/basic-select.png",
       "id": "basic-select",
       "recording": "docs/recordings/basic-select.cast",
       "screenshot": "docs/screenshots/basic-select.svg",
@@ -15,6 +16,7 @@
       "events": [
         "reject"
       ],
+      "gui_screenshot": "docs/gui-screenshots/reject-risk.png",
       "id": "reject-risk",
       "recording": "docs/recordings/reject-risk.cast",
       "screenshot": "docs/screenshots/reject-risk.svg",
@@ -25,6 +27,7 @@
       "events": [
         "clarify"
       ],
+      "gui_screenshot": "docs/gui-screenshots/clarify-ownership.png",
       "id": "clarify-ownership",
       "recording": "docs/recordings/clarify-ownership.cast",
       "screenshot": "docs/screenshots/clarify-ownership.svg",
@@ -35,6 +38,7 @@
       "events": [
         "request-more-evidence"
       ],
+      "gui_screenshot": "docs/gui-screenshots/more-evidence.png",
       "id": "more-evidence",
       "recording": "docs/recordings/more-evidence.cast",
       "screenshot": "docs/screenshots/more-evidence.svg",
@@ -46,6 +50,7 @@
         "add-proposal",
         "select"
       ],
+      "gui_screenshot": "docs/gui-screenshots/add-alternative.png",
       "id": "add-alternative",
       "recording": "docs/recordings/add-alternative.cast",
       "screenshot": "docs/screenshots/add-alternative.svg",
@@ -56,6 +61,7 @@
       "events": [
         "safe-exit"
       ],
+      "gui_screenshot": "docs/gui-screenshots/safe-exit.png",
       "id": "safe-exit",
       "recording": "docs/recordings/safe-exit.cast",
       "screenshot": "docs/screenshots/safe-exit.svg",
@@ -66,6 +72,7 @@
       "events": [
         "reopen"
       ],
+      "gui_screenshot": "docs/gui-screenshots/targeted-reopen.png",
       "id": "targeted-reopen",
       "recording": "docs/recordings/targeted-reopen.cast",
       "screenshot": "docs/screenshots/targeted-reopen.svg",
@@ -76,6 +83,7 @@
       "events": [
         "select"
       ],
+      "gui_screenshot": "docs/gui-screenshots/batch-partial.png",
       "id": "batch-partial",
       "recording": "docs/recordings/batch-partial.cast",
       "screenshot": "docs/screenshots/batch-partial.svg",
@@ -87,6 +95,7 @@
         "clarify",
         "select"
       ],
+      "gui_screenshot": "docs/gui-screenshots/batch-clarify.png",
       "id": "batch-clarify",
       "recording": "docs/recordings/batch-clarify.cast",
       "screenshot": "docs/screenshots/batch-clarify.svg",
@@ -95,6 +104,7 @@
     {
       "decision_count": 3,
       "events": [],
+      "gui_screenshot": "docs/gui-screenshots/escape-exit.png",
       "id": "escape-exit",
       "recording": "docs/recordings/escape-exit.cast",
       "screenshot": "docs/screenshots/escape-exit.svg",
@@ -106,6 +116,7 @@
         "request-more-evidence",
         "clarify"
       ],
+      "gui_screenshot": "docs/gui-screenshots/reask-after-gap.png",
       "id": "reask-after-gap",
       "recording": "docs/recordings/reask-after-gap.cast",
       "screenshot": "docs/screenshots/reask-after-gap.svg",
@@ -117,6 +128,7 @@
         "add-proposal",
         "reject"
       ],
+      "gui_screenshot": "docs/gui-screenshots/proposal-reject.png",
       "id": "proposal-reject",
       "recording": "docs/recordings/proposal-reject.cast",
       "screenshot": "docs/screenshots/proposal-reject.svg",
@@ -128,6 +140,7 @@
         "reopen",
         "clarify"
       ],
+      "gui_screenshot": "docs/gui-screenshots/revision-reopen.png",
       "id": "revision-reopen",
       "recording": "docs/recordings/revision-reopen.cast",
       "screenshot": "docs/screenshots/revision-reopen.svg",
@@ -139,6 +152,7 @@
         "select",
         "safe-exit"
       ],
+      "gui_screenshot": "docs/gui-screenshots/transport-roundtrip.png",
       "id": "transport-roundtrip",
       "recording": "docs/recordings/transport-roundtrip.cast",
       "screenshot": "docs/screenshots/transport-roundtrip.svg",
@@ -153,6 +167,7 @@
         "select",
         "safe-exit"
       ],
+      "gui_screenshot": "docs/gui-screenshots/full-contest.png",
       "id": "full-contest",
       "recording": "docs/recordings/full-contest.cast",
       "screenshot": "docs/screenshots/full-contest.svg",
@@ -164,6 +179,7 @@
         "request-more-evidence",
         "reject"
       ],
+      "gui_screenshot": "docs/gui-screenshots/evidence-then-reject.png",
       "id": "evidence-then-reject",
       "recording": "docs/recordings/evidence-then-reject.cast",
       "screenshot": "docs/screenshots/evidence-then-reject.svg",
@@ -175,6 +191,7 @@
         "reopen",
         "safe-exit"
       ],
+      "gui_screenshot": "docs/gui-screenshots/reopen-save.png",
       "id": "reopen-save",
       "recording": "docs/recordings/reopen-save.cast",
       "screenshot": "docs/screenshots/reopen-save.svg",
@@ -187,6 +204,7 @@
         "clarify",
         "select"
       ],
+      "gui_screenshot": "docs/gui-screenshots/alternative-clarify.png",
       "id": "alternative-clarify",
       "recording": "docs/recordings/alternative-clarify.cast",
       "screenshot": "docs/screenshots/alternative-clarify.svg",
@@ -197,6 +215,7 @@
       "events": [
         "request-more-evidence"
       ],
+      "gui_screenshot": "docs/gui-screenshots/cancel-after-review.png",
       "id": "cancel-after-review",
       "recording": "docs/recordings/cancel-after-review.cast",
       "screenshot": "docs/screenshots/cancel-after-review.svg",
@@ -210,6 +229,7 @@
         "reject",
         "safe-exit"
       ],
+      "gui_screenshot": "docs/gui-screenshots/multi-point-handoff.png",
       "id": "multi-point-handoff",
       "recording": "docs/recordings/multi-point-handoff.cast",
       "screenshot": "docs/screenshots/multi-point-handoff.svg",
@@ -220,6 +240,7 @@
       "events": [
         "select"
       ],
+      "gui_screenshot": "docs/gui-screenshots/navigate-documents.png",
       "id": "navigate-documents",
       "recording": "docs/recordings/navigate-documents.cast",
       "screenshot": "docs/screenshots/navigate-documents.svg",
@@ -231,6 +252,7 @@
         "select",
         "select"
       ],
+      "gui_screenshot": "docs/gui-screenshots/revise-selection.png",
       "id": "revise-selection",
       "recording": "docs/recordings/revise-selection.cast",
       "screenshot": "docs/screenshots/revise-selection.svg",
@@ -239,6 +261,7 @@
     {
       "decision_count": 3,
       "events": [],
+      "gui_screenshot": "docs/gui-screenshots/explicit-document-views.png",
       "id": "explicit-document-views",
       "recording": "docs/recordings/explicit-document-views.cast",
       "screenshot": "docs/screenshots/explicit-document-views.svg",
@@ -251,6 +274,7 @@
         "select",
         "select"
       ],
+      "gui_screenshot": "docs/gui-screenshots/proposal-with-navigation.png",
       "id": "proposal-with-navigation",
       "recording": "docs/recordings/proposal-with-navigation.cast",
       "screenshot": "docs/screenshots/proposal-with-navigation.svg",

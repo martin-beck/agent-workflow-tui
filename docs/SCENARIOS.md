@@ -1,6 +1,6 @@
-# TUI scenario workflows
+# Agent Workflow UI scenario workflows
 
-These workflows are generated from `scenarios/corpus.json` and replayed through the actual prompt-toolkit TUI. Each case has a deterministic SVG pane snapshot, an asciinema v2 terminal animation, and an explicit event trace.
+These workflows are generated from `scenarios/corpus.json` and replayed through the actual prompt-toolkit TUI and Qt GUI. Each case has a terminal SVG pane snapshot, a GUI screenshot, an asciinema v2 terminal animation, and an explicit event trace.
 
 Play a recording locally with `asciinema play docs/recordings/<scenario-id>.cast`.
 
@@ -13,6 +13,7 @@ Play a recording locally with `asciinema play docs/recordings/<scenario-id>.cast
 - **Input actions:** `enter`
 - **Emitted events:** `select`
 - **Screenshot:** [open terminal capture](screenshots/basic-select.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/basic-select.png)
 - **Live recording:** [play asciinema recording](recordings/basic-select.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -24,6 +25,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `r`
 - **Emitted events:** `reject`
 - **Screenshot:** [open terminal capture](screenshots/reject-risk.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/reject-risk.png)
 - **Live recording:** [play asciinema recording](recordings/reject-risk.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -35,6 +37,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `c`
 - **Emitted events:** `clarify`
 - **Screenshot:** [open terminal capture](screenshots/clarify-ownership.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/clarify-ownership.png)
 - **Live recording:** [play asciinema recording](recordings/clarify-ownership.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -46,6 +49,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `m`
 - **Emitted events:** `request-more-evidence`
 - **Screenshot:** [open terminal capture](screenshots/more-evidence.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/more-evidence.png)
 - **Live recording:** [play asciinema recording](recordings/more-evidence.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -57,6 +61,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `a, enter`
 - **Emitted events:** `add-proposal, select`
 - **Screenshot:** [open terminal capture](screenshots/add-alternative.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/add-alternative.png)
 - **Live recording:** [play asciinema recording](recordings/add-alternative.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -68,6 +73,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `s`
 - **Emitted events:** `safe-exit`
 - **Screenshot:** [open terminal capture](screenshots/safe-exit.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/safe-exit.png)
 - **Live recording:** [play asciinema recording](recordings/safe-exit.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -79,6 +85,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `o`
 - **Emitted events:** `reopen`
 - **Screenshot:** [open terminal capture](screenshots/targeted-reopen.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/targeted-reopen.png)
 - **Live recording:** [play asciinema recording](recordings/targeted-reopen.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -90,6 +97,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `enter, q`
 - **Emitted events:** `select`
 - **Screenshot:** [open terminal capture](screenshots/batch-partial.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/batch-partial.png)
 - **Live recording:** [play asciinema recording](recordings/batch-partial.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -101,6 +109,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `c, enter`
 - **Emitted events:** `clarify, select`
 - **Screenshot:** [open terminal capture](screenshots/batch-clarify.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/batch-clarify.png)
 - **Live recording:** [play asciinema recording](recordings/batch-clarify.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -112,6 +121,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `escape`
 - **Emitted events:** `none`
 - **Screenshot:** [open terminal capture](screenshots/escape-exit.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/escape-exit.png)
 - **Live recording:** [play asciinema recording](recordings/escape-exit.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -123,6 +133,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `m, c`
 - **Emitted events:** `request-more-evidence, clarify`
 - **Screenshot:** [open terminal capture](screenshots/reask-after-gap.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/reask-after-gap.png)
 - **Live recording:** [play asciinema recording](recordings/reask-after-gap.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -134,6 +145,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `a, r`
 - **Emitted events:** `add-proposal, reject`
 - **Screenshot:** [open terminal capture](screenshots/proposal-reject.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/proposal-reject.png)
 - **Live recording:** [play asciinema recording](recordings/proposal-reject.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -145,6 +157,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `o, c`
 - **Emitted events:** `reopen, clarify`
 - **Screenshot:** [open terminal capture](screenshots/revision-reopen.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/revision-reopen.png)
 - **Live recording:** [play asciinema recording](recordings/revision-reopen.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -156,6 +169,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `enter, s`
 - **Emitted events:** `select, safe-exit`
 - **Screenshot:** [open terminal capture](screenshots/transport-roundtrip.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/transport-roundtrip.png)
 - **Live recording:** [play asciinema recording](recordings/transport-roundtrip.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -167,6 +181,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `c, m, a, enter, s`
 - **Emitted events:** `clarify, request-more-evidence, add-proposal, select, safe-exit`
 - **Screenshot:** [open terminal capture](screenshots/full-contest.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/full-contest.png)
 - **Live recording:** [play asciinema recording](recordings/full-contest.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -178,6 +193,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `m, r`
 - **Emitted events:** `request-more-evidence, reject`
 - **Screenshot:** [open terminal capture](screenshots/evidence-then-reject.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/evidence-then-reject.png)
 - **Live recording:** [play asciinema recording](recordings/evidence-then-reject.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -189,6 +205,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `o, s`
 - **Emitted events:** `reopen, safe-exit`
 - **Screenshot:** [open terminal capture](screenshots/reopen-save.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/reopen-save.png)
 - **Live recording:** [play asciinema recording](recordings/reopen-save.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -200,6 +217,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `a, c, enter`
 - **Emitted events:** `add-proposal, clarify, select`
 - **Screenshot:** [open terminal capture](screenshots/alternative-clarify.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/alternative-clarify.png)
 - **Live recording:** [play asciinema recording](recordings/alternative-clarify.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -211,6 +229,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `m, escape`
 - **Emitted events:** `request-more-evidence`
 - **Screenshot:** [open terminal capture](screenshots/cancel-after-review.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/cancel-after-review.png)
 - **Live recording:** [play asciinema recording](recordings/cancel-after-review.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -222,6 +241,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `enter, c, r, s`
 - **Emitted events:** `select, clarify, reject, safe-exit`
 - **Screenshot:** [open terminal capture](screenshots/multi-point-handoff.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/multi-point-handoff.png)
 - **Live recording:** [play asciinema recording](recordings/multi-point-handoff.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -233,6 +253,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `down, tab, page-down, page-up, enter`
 - **Emitted events:** `select`
 - **Screenshot:** [open terminal capture](screenshots/navigate-documents.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/navigate-documents.png)
 - **Live recording:** [play asciinema recording](recordings/navigate-documents.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -244,6 +265,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `enter, right, enter`
 - **Emitted events:** `select, select`
 - **Screenshot:** [open terminal capture](screenshots/revise-selection.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/revise-selection.png)
 - **Live recording:** [play asciinema recording](recordings/revise-selection.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -255,6 +277,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `workplan, page-down, design, page-up, q`
 - **Emitted events:** `none`
 - **Screenshot:** [open terminal capture](screenshots/explicit-document-views.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/explicit-document-views.png)
 - **Live recording:** [play asciinema recording](recordings/explicit-document-views.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.
@@ -266,6 +289,7 @@ This synthetic workflow is privacy-safe and contains no real prompts, credential
 - **Input actions:** `tab, down, a, enter, left, enter`
 - **Emitted events:** `add-proposal, select, select`
 - **Screenshot:** [open terminal capture](screenshots/proposal-with-navigation.svg)
+- **GUI capture:** [open GUI screenshot](gui-screenshots/proposal-with-navigation.png)
 - **Live recording:** [play asciinema recording](recordings/proposal-with-navigation.cast)
 
 This synthetic workflow is privacy-safe and contains no real prompts, credentials, host paths, or transcripts.

@@ -33,6 +33,11 @@ jobs:
       - run: asciinema --version
       - run: python tools/validate_scenarios.py
       - run: python tools/run_scenarios.py
+      - run: python tools/run_gui_scenarios.py --output-dir artifacts/gui-screenshots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-scenario-screenshots
+          path: artifacts/gui-screenshots/*.png
       - run: python tools/generate_scenario_docs.py
       - run: python tools/check_scenario_docs.py
       - name: Validate asciinema recordings
@@ -58,5 +63,5 @@ jobs:
       - name: Fail on stale generated artifacts
         run: |
           git diff --check
-          git diff --exit-code -- artifacts docs/SCENARIOS.md docs/screenshots
-          test -z "$(git ls-files --others --exclude-standard -- artifacts docs/SCENARIOS.md docs/screenshots)"
+          git diff --exit-code -- artifacts docs/SCENARIOS.md docs/screenshots docs/gui-screenshots
+          test -z "$(git ls-files --others --exclude-standard -- artifacts docs/SCENARIOS.md docs/screenshots docs/gui-screenshots | grep -v '^artifacts/gui-screenshots/' || true)"

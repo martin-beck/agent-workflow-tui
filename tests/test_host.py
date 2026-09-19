@@ -90,6 +90,15 @@ def test_handoff_rejects_unsafe_short_command_host():
             "ssh_host": "bad;host", "client_capabilities": {"platform": "windows", "shell": "powershell"}})
 
 
+def test_linux_remote_handoff_is_also_one_short_connector_command():
+    message = handoff_message("manual", "/local/request.json", summary="1 decision", remote={
+        "ssh_host": "linux-box", "session_file": "/srv/state/request.json",
+        "event_file": "/srv/state/events.json", "client_capabilities":
+        {"platform": "linux", "shell": "bash", "gui_available": False}})
+    assert "awui-connect --ssh-host linux-box" in message
+    assert "--backend tui" in message
+
+
 def test_private_session_file_can_be_attached(tmp_path):
     path = write_session_file(request(), tmp_path)
     if os.name != "nt":

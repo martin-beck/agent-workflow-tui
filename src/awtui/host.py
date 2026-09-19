@@ -184,6 +184,15 @@ def handoff_message(mode: str, session_file: str | Path, *, summary: str, remote
             # handoff short; the user's SSH config remains authoritative.
             command = f"awui-connect --ssh-host {remote['ssh_host']} --session-file '{remote_request}' --remote-event-file '{remote_result}' --backend {backend}"
             return f"HUMAN DECISION REQUIRED\n{summary}\nRun in Windows PowerShell (SSH config alias preserved):\n  {command}\nWaiting for Coordinator acceptance."
+        if remote.get("ssh_host"):
+            if any(ch in str(remote["ssh_host"]) for ch in "\r\n;&|`$"):
+                raise ValueError("ssh_host must be a plain SSH config alias or host name")
+            capabilities = remote.get("client_capabilities") or client_capabilities()
+            backend = str(remote.get("backend") or ("gui" if capabilities.get("gui_available", True) else "tui"))
+            remote_request = str(remote.get("session_file", session_file))
+            remote_result = str(remote.get("event_file") or f"{remote_request}.events.jsonl")
+            command = f"awui-connect --ssh-host {remote['ssh_host']} --session-file '{remote_request}' --remote-event-file '{remote_result}' --backend {backend}"
+            return f"HUMAN DECISION REQUIRED\n{summary}\nRun in the user-controlled terminal:\n  {command}\nWaiting for Coordinator acceptance."
     executable = "awui-live" if backend == "gui" else "awtui-live"
     command = shlex.join([executable, "--session-file", str(session_file)])
     if mode == "manual":

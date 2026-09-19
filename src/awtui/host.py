@@ -174,13 +174,15 @@ def handoff_message(mode: str, session_file: str | Path, *, summary: str, remote
         if capabilities.get("platform") == "windows" and capabilities.get("shell") == "powershell":
             if not remote.get("ssh_host"):
                 raise ValueError("Windows remote handoff requires ssh_host")
+            if any(ch in str(remote["ssh_host"]) for ch in "\r\n;&|`$"):
+                raise ValueError("ssh_host must be a plain SSH config alias or host name")
             backend = str(remote.get("backend") or ("gui" if capabilities.get("gui_available", True) else "tui"))
-            command = powershell_ssh_handoff_command(
-                ssh_host=str(remote["ssh_host"]),
-                remote_session_file=remote.get("session_file", session_file),
-                remote_event_file=remote.get("event_file"),
-                backend=backend,
-            )
+            remote_request = str(remote.get("session_file", session_file))
+            remote_result = str(remote.get("event_file") or f"{remote_request}.events.jsonl")
+            # The installed connector performs capability detection, request
+            # transfer, UI selection, and result upload. Keep the agent's
+            # handoff short; the user's SSH config remains authoritative.
+            command = f"awui-connect --ssh-host {remote['ssh_host']} --session-file '{remote_request}' --remote-event-file '{remote_result}' --backend {backend}"
             return f"HUMAN DECISION REQUIRED\n{summary}\nRun in Windows PowerShell (SSH config alias preserved):\n  {command}\nWaiting for Coordinator acceptance."
     executable = "awui-live" if backend == "gui" else "awtui-live"
     command = shlex.join([executable, "--session-file", str(session_file)])

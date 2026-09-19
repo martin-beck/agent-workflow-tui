@@ -33,11 +33,21 @@ class DecisionWindow:
         self.window = QtWidgets.QMainWindow()
         self.window.setWindowTitle(title)
         self.window.setMinimumSize(1050, 700)
+        self.app.setStyle("Fusion")
         self.window.setStyleSheet(
-            "QMainWindow { background:#10141d; } QWidget { color:#e7edf7; font-size:13px; }"
-            "QFrame, QListWidget, QTextBrowser, QLineEdit { background:#171d29; border:1px solid #334158; border-radius:8px; }"
-            "QPushButton { background:#2b6de0; border:0; border-radius:6px; padding:8px 14px; }"
-            "QPushButton:hover { background:#4a86ed; } QListWidget::item:selected { background:#315fba; }"
+            "QMainWindow { background:#0f1724; } QWidget { color:#e8eef7; font-size:13px; }"
+            "QLabel#sectionTitle { color:#9db8d8; font-size:11px; font-weight:700; letter-spacing:1px; }"
+            "QFrame, QListWidget, QTextBrowser, QLineEdit { background:#172235; border:1px solid #334862; border-radius:8px; }"
+            "QListWidget::item { padding:7px 8px; border-radius:5px; }"
+            "QListWidget::item:selected { background:#285a94; color:#ffffff; }"
+            "QTextBrowser { padding:8px; selection-background-color:#d9a441; selection-color:#111827; }"
+            "QPushButton { background:#24364f; border:1px solid #49617d; border-radius:6px; padding:8px 12px; min-width:92px; }"
+            "QPushButton:hover { background:#315d89; border-color:#78b4e8; }"
+            "QPushButton:focus { border:2px solid #8cc8ff; }"
+            "QPushButton#primaryAction { background:#18794e; border-color:#42b883; font-weight:700; }"
+            "QPushButton#primaryAction:hover { background:#239663; }"
+            "QPushButton#dangerAction { background:#713842; border-color:#c8757e; }"
+            "QToolTip { background:#f5f7fb; color:#172235; border:1px solid #6d89a8; padding:6px; }"
         )
         self._build()
         self._refresh()
@@ -47,27 +57,35 @@ class DecisionWindow:
         central = QtWidgets.QWidget()
         root = QtWidgets.QVBoxLayout(central)
         header = QtWidgets.QLabel("AGENT WORKFLOW  /  HUMAN DECISION SESSION")
-        header.setStyleSheet("font-size:16px; font-weight:700; color:#8eb8ff; padding:4px;")
+        header.setStyleSheet("font-size:16px; font-weight:700; color:#a8cbff; padding:4px;")
+        header.setToolTip("Review the batch, inspect the linked Markdown context, then record each human decision.")
         root.addWidget(header)
         split = QtWidgets.QSplitter(self.QtCore.Qt.Orientation.Horizontal)
         docs = QtWidgets.QSplitter(self.QtCore.Qt.Orientation.Vertical)
         self.design = QtWidgets.QTextBrowser(); self.workplan = QtWidgets.QTextBrowser()
+        self.design.setAccessibleName("Design document"); self.workplan.setAccessibleName("Work plan document")
+        self.design.setToolTip("Rendered design document. The highlighted phrase follows the selected decision.")
+        self.workplan.setToolTip("Rendered work plan. The highlighted phrase follows the selected decision.")
         self.design.setOpenExternalLinks(False); self.workplan.setOpenExternalLinks(False)
         docs.addWidget(self.design); docs.addWidget(self.workplan); docs.setSizes([1, 1])
         split.addWidget(docs)
         right = QtWidgets.QWidget(); right_layout = QtWidgets.QVBoxLayout(right)
-        self.status = QtWidgets.QLabel(); right_layout.addWidget(self.status)
-        self.points = QtWidgets.QListWidget(); self.points.currentRowChanged.connect(self._select_point); right_layout.addWidget(self.points, 2)
-        self.proposals = QtWidgets.QListWidget(); self.proposals.currentRowChanged.connect(self._select_proposal); right_layout.addWidget(self.proposals, 2)
-        self.helper = QtWidgets.QTextBrowser(); right_layout.addWidget(self.helper, 3)
+        self.status = QtWidgets.QLabel(); self.status.setAccessibleName("Decision session status"); self.status.setToolTip("Shows saved state and how many decisions in this batch are selected."); right_layout.addWidget(self.status)
+        points_title = QtWidgets.QLabel("DECISIONS IN THIS BATCH"); points_title.setObjectName("sectionTitle"); right_layout.addWidget(points_title)
+        self.points = QtWidgets.QListWidget(); self.points.setAccessibleName("Batch decisions"); self.points.setToolTip("Select a decision to see its proposals and corresponding document highlights."); self.points.currentRowChanged.connect(self._select_point); right_layout.addWidget(self.points, 2)
+        proposals_title = QtWidgets.QLabel("PROPOSED SOLUTIONS"); proposals_title.setObjectName("sectionTitle"); right_layout.addWidget(proposals_title)
+        self.proposals = QtWidgets.QListWidget(); self.proposals.setAccessibleName("Decision proposals"); self.proposals.setToolTip("Choose a proposal, then use Select, Reject, or Clarify. A selected proposal can be reopened."); self.proposals.currentRowChanged.connect(self._select_proposal); right_layout.addWidget(self.proposals, 2)
+        helper_title = QtWidgets.QLabel("DETAILS AND IMPLICATIONS"); helper_title.setObjectName("sectionTitle"); right_layout.addWidget(helper_title)
+        self.helper = QtWidgets.QTextBrowser(); self.helper.setAccessibleName("Proposal details and implications"); self.helper.setToolTip("Rationale, confidence, trade-offs, evidence gaps, and the active document anchor."); right_layout.addWidget(self.helper, 3)
         buttons = QtWidgets.QHBoxLayout()
-        for label, callback in (("Select", self._select), ("Reject", lambda: self._respond("reject")), ("Clarify", lambda: self._respond("clarify")), ("More evidence", self._request_evidence), ("Reopen", self._reopen), ("Edit own proposal", self._edit)):
-            button = QtWidgets.QPushButton(label); button.clicked.connect(callback); buttons.addWidget(button)
+        actions = (("Select", self._select, "Record the highlighted proposal as the current human decision.", "primaryAction"), ("Reject", lambda: self._respond("reject"), "Reject this proposal and leave the decision unresolved.", "dangerAction"), ("Clarify", lambda: self._respond("clarify"), "Ask the Coordinator for clarification; this is not an acceptance.", ""), ("More evidence", self._request_evidence, "Keep this decision open and request additional evidence.", ""), ("Reopen", self._reopen, "Reopen an answered decision so another proposal can be selected.", ""), ("Edit own proposal", self._edit, "Create or edit a user-authored proposal for this decision.", ""))
+        for label, callback, tip, object_name in actions:
+            button = QtWidgets.QPushButton(label); button.setAccessibleName(label); button.setToolTip(tip); button.setObjectName(object_name); button.clicked.connect(callback); buttons.addWidget(button)
         right_layout.addLayout(buttons)
         bottom = QtWidgets.QHBoxLayout()
-        self.document_button = QtWidgets.QPushButton("Switch document"); self.document_button.clicked.connect(self._switch_document); bottom.addWidget(self.document_button)
-        save = QtWidgets.QPushButton("Save"); save.clicked.connect(self._save); bottom.addWidget(save)
-        exit_button = QtWidgets.QPushButton("Save + Exit"); exit_button.clicked.connect(self._save_exit); bottom.addWidget(exit_button)
+        self.document_button = QtWidgets.QPushButton("Switch document"); self.document_button.setAccessibleName("Switch document"); self.document_button.setToolTip("Switch the active document view between Design and Work plan."); self.document_button.clicked.connect(self._switch_document); bottom.addWidget(self.document_button)
+        save = QtWidgets.QPushButton("Save"); save.setAccessibleName("Save"); save.setToolTip("Persist the current selections to the revision-bound event journal."); save.clicked.connect(self._save); bottom.addWidget(save)
+        exit_button = QtWidgets.QPushButton("Save + Exit"); exit_button.setAccessibleName("Save and exit"); exit_button.setObjectName("primaryAction"); exit_button.setToolTip("Save all current selections and close the decision session."); exit_button.clicked.connect(self._save_exit); bottom.addWidget(exit_button)
         right_layout.addLayout(bottom)
         split.addWidget(right); split.setSizes([700, 420])
         root.addWidget(split, 1)

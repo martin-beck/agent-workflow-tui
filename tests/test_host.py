@@ -55,8 +55,8 @@ def test_windows_remote_handoff_falls_back_to_tui_without_gui_capability():
                 "event_file": "/remote/events.json", "client_capabilities":
                 {"platform": "windows", "shell": "powershell", "gui_available": False}},
     )
-    assert "awtui-live --session-file" in message
-    assert "awui-live --session-file" not in message
+    assert "awui-connect" in message
+    assert "--backend tui" in message
 
 
 def test_powershell_ssh_round_trip_uses_config_alias_and_remote_result():
@@ -80,8 +80,14 @@ def test_handoff_message_prints_windows_round_trip_command():
                 {"platform": "windows", "shell": "powershell"}},
     )
     assert "Windows PowerShell" in message
-    assert "ssh build-box" in message
-    assert "scp" in message
+    assert "awui-connect --ssh-host build-box" in message
+    assert "--remote-event-file '/remote/events.json'" in message
+
+
+def test_handoff_rejects_unsafe_short_command_host():
+    with pytest.raises(ValueError, match="plain SSH"):
+        handoff_message("manual", "/remote/request.json", summary="1 decision", remote={
+            "ssh_host": "bad;host", "client_capabilities": {"platform": "windows", "shell": "powershell"}})
 
 
 def test_private_session_file_can_be_attached(tmp_path):

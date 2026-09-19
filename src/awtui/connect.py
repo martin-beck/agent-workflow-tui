@@ -55,8 +55,8 @@ def bootstrap_runtime(archive: str | Path, destination: str | Path, *, expected:
     return target
 
 
-def _run(command: list[str]) -> int:
-    return subprocess.run(command, check=False).returncode
+def _run(command: list[str], *, env: dict[str, str] | None = None) -> int:
+    return subprocess.run(command, check=False, env=env).returncode
 
 
 def _validate_remote_path(value: str) -> str:
@@ -80,8 +80,15 @@ def connect(*, session_file: str, ssh_host: str | None = None,
     os.environ["AWUI_BACKEND"] = selected
     executable = "awui-live" if selected == "gui" else "awtui-live"
     runtime_root: Path | None = None
+    runtime_env = os.environ.copy()
     if not shutil.which(executable) and os.environ.get("AWUI_RUNTIME_ARCHIVE"):
         runtime_root = bootstrap_runtime(os.environ["AWUI_RUNTIME_ARCHIVE"], tempfile.mkdtemp(prefix="awui-runtime-"))
+        # The archive is deliberately source-oriented and may not contain a
+        # console-script entry point.  Make its package importable for the
+        # module fallback while retaining the caller's environment.
+        runtime_env["PYTHONPATH"] = os.pathsep.join(
+            part for part in (str(runtime_root), runtime_env.get("PYTHONPATH", "")) if part
+        )
         candidate = runtime_root / "bin" / executable
         if candidate.exists():
             executable_argv = [str(candidate)]
@@ -95,7 +102,7 @@ def connect(*, session_file: str, ssh_host: str | None = None,
         executable_argv = [executable]
     output_path = remote_event_file or f"{session_file}.events.jsonl"
     if not ssh_host:
-        return _run([*executable_argv, "--session-file", session_file, "--output-json", output_path])
+        return _run([*executable_argv, "--session-file", session_file, "--output-json", output_path], env=runtime_env)
     session_file = _validate_remote_path(session_file)
     remote_result = _validate_remote_path(remote_event_file or f"{session_file}.events.jsonl")
     with tempfile.TemporaryDirectory(prefix="awui-connect-") as directory:
@@ -105,7 +112,7 @@ def connect(*, session_file: str, ssh_host: str | None = None,
             fetched = subprocess.run(["ssh", ssh_host, "cat", "--", session_file], stdout=stream, check=False)
         if fetched.returncode != 0:
             return fetched.returncode
-        result = _run([*executable_argv, "--session-file", str(local_request), "--output-json", str(local_result)])
+        result = _run([*executable_argv, "--session-file", str(local_request), "--output-json", str(local_result)], env=runtime_env)
         journal = local_result.with_suffix(".events.jsonl")
         if result != 0 or not local_result.is_file():
             return result or 2

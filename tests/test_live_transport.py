@@ -9,6 +9,18 @@ def test_live_transport_delivers_revision_bound_event_and_acknowledges():
     assert events[0]["sequence"] == 1
 
 
+def test_live_transport_uses_canonical_nested_payload_shape():
+    events = []
+    transport = LiveSessionTransport(
+        {"project_id": "p", "ar_id": "AR-25", "task_revision": 1, "packet_digest": "d", "session_id": "s"},
+        events.append,
+    )
+    assert transport.submit("select", point_id="p1", disposition="selected").accepted
+    event = events[0]
+    assert event["payload"] == {"point_id": "p1", "disposition": "selected"}
+    assert "point_id" not in event
+
+
 def test_live_transport_bounds_failures_and_reports_rejection():
     transport = LiveSessionTransport({"project_id": "p", "ar_id": "AR-25", "task_revision": 1, "packet_digest": "d", "session_id": "s"}, lambda _event: False, RetryPolicy(2))
     ack = transport.submit("select")

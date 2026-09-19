@@ -63,7 +63,12 @@ class LiveSessionTransport:
     def submit(self, event_type: str, **payload: Any) -> EventAcknowledgement:
         sequence = self.boundary.next_sequence
         envelope = SessionEnvelope(self.boundary.project_id, self.boundary.ar_id, self.boundary.task_revision, self.boundary.packet_digest, self.boundary.session_id, sequence, event_type)
-        event = envelope.as_event(**payload)
+        # Keep the wire shape identical to ``schemas/tui-event.schema.json``:
+        # revision/session identity is envelope metadata and all decision
+        # details are contained in one payload object.  Earlier versions
+        # leaked point_id/selected at the top level, which passed the local
+        # boundary checks but could not be projected by the Coordinator.
+        event = envelope.as_event(payload=dict(payload))
         try:
             # Validate against the current boundary, but do not commit the
             # sequence until the receiver has acknowledged delivery. A

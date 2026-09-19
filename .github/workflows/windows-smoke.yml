@@ -23,6 +23,7 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: python -m pip install '.[gui]' pytest
+      - run: python tools/build_runtime_archive.py "$env:RUNNER_TEMP\awui-runtime.tar.gz"
       # Keep this job provider-neutral: Windows has no POSIX PTY guarantee.
       # It validates backend selection, manual handoff, private session files,
       # bounded append-only journals, and the revision-bound bridge contract.

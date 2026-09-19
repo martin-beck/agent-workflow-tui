@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import tarfile
 import re
+import hashlib
 from pathlib import Path
 
 from .host import detect_ui_backend
@@ -25,7 +26,13 @@ def runtime_archive_name(facts: dict[str, str] | None = None) -> str:
     return f"awui-{facts['platform']}-{facts['architecture']}.tar.gz"
 
 
-def bootstrap_runtime(archive: str | Path, destination: str | Path) -> Path:
+def runtime_manifest(facts: dict[str, str] | None = None) -> dict[str, str]:
+    facts = facts or environment_fingerprint()
+    return {"schema_version": "1", "platform": facts["platform"],
+            "architecture": facts["architecture"], "python": facts["python"]}
+
+
+def bootstrap_runtime(archive: str | Path, destination: str | Path, *, expected: dict[str, str] | None = None) -> Path:
     """Extract a bounded, prebuilt UI runtime into a temporary directory."""
     source = Path(archive)
     target = Path(destination)
@@ -37,6 +44,14 @@ def bootstrap_runtime(archive: str | Path, destination: str | Path) -> Path:
         if sum(member.size for member in members if member.isfile()) > 256 * 1024 * 1024:
             raise ValueError("runtime archive exceeds bounded size")
         bundle.extractall(target)
+    manifest_path = target / "runtime-manifest.json"
+    if not manifest_path.is_file():
+        raise ValueError("runtime archive has no manifest")
+    manifest = __import__("json").loads(manifest_path.read_text(encoding="utf-8"))
+    expected = expected or runtime_manifest()
+    for key in ("schema_version", "platform", "architecture"):
+        if manifest.get(key) != expected.get(key):
+            raise ValueError(f"runtime archive {key} does not match this host")
     return target
 
 

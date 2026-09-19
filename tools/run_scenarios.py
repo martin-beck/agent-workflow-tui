@@ -245,7 +245,7 @@ def _artifacts(root: Path = ROOT) -> dict[Path, str]:
         recording = f"docs/recordings/{scenario_id}.cast"
         recordings[Path(recording)] = cast
         decision_count = len(demo_decisions(scenario))
-        results.append({"id": scenario_id, "title": scenario["title"], "events": events, "decision_count": decision_count, "screenshot": f"docs/screenshots/{filename}", "recording": recording})
+        results.append({"id": scenario_id, "title": scenario["title"], "events": events, "decision_count": decision_count, "screenshot": f"docs/screenshots/{filename}", "gui_screenshot": f"docs/gui-screenshots/{scenario_id}.png", "recording": recording})
     manifest = {"schema_version": 1, "scenario_count": len(results), "results": results}
     artifacts = dict(screenshots)
     artifacts.update(recordings)

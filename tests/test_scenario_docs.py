@@ -13,4 +13,5 @@ def test_generated_docs_cover_every_scenario_and_screenshot():
     assert "privacy-safe" in text
     assert "(screenshots/basic-select.svg)" in text
     assert "(recordings/basic-select.cast)" in text
+    assert "(gui-screenshots/basic-select.png)" in text
     assert check(root) == []

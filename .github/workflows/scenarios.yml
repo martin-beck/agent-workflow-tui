@@ -60,8 +60,6 @@ jobs:
           sshd_pid=$!
           trap 'sudo kill "$sshd_pid"' EXIT
           python tools/run_ssh_roundtrip.py --host 127.0.0.1 --port 22222 --user awui-ci --identity "$RUNNER_TEMP/awui-ci-key" --remote-dir /tmp/awui-roundtrip --insecure-host-key-check
-      - name: Exercise GUI and TUI connector invocations over SSH
-        run: |
           mkdir -p "$HOME/.ssh"
           chmod 700 "$HOME/.ssh"
           printf 'Host awui-e2e\n  HostName 127.0.0.1\n  Port 22222\n  User awui-ci\n  IdentityFile %s\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n' "$RUNNER_TEMP/awui-ci-key" > "$HOME/.ssh/config"
